@@ -1,0 +1,208 @@
+import { IsString, IsNumber, IsDateString, IsEnum, IsOptional, IsBoolean, IsArray, Min } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+
+export class CreateTransactionDto {
+  @ApiProperty({
+    description: 'Budget ID this transaction belongs to',
+    example: '60a7b3d4c123456789abcdef',
+  })
+  @IsString()
+  budgetId: string;
+
+  @ApiProperty({
+    description: 'Transaction amount',
+    example: 85.50,
+    minimum: 0,
+  })
+  @IsNumber()
+  amount: number;
+
+  @ApiProperty({
+    description: 'Currency code',
+    example: 'USD',
+  })
+  @IsString()
+  currency: string;
+
+  @ApiProperty({
+    description: 'Transaction type',
+    enum: ['income', 'expense'],
+    example: 'expense',
+  })
+  @IsEnum(['income', 'expense'])
+  type: 'income' | 'expense';
+
+  @ApiProperty({
+    description: 'Transaction category',
+    example: 'Groceries',
+  })
+  @IsString()
+  category: string;
+
+  @ApiProperty({
+    description: 'Transaction subcategory',
+    example: 'Organic Foods',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  subcategory?: string;
+
+  @ApiProperty({
+    description: 'Transaction description',
+    example: 'Grocery shopping at Whole Foods',
+  })
+  @IsString()
+  description: string;
+
+  @ApiProperty({
+    description: 'Transaction date',
+    example: '2025-01-15',
+    format: 'date',
+  })
+  @IsDateString()
+  date: string;
+
+  @ApiProperty({
+    description: 'Payment method used',
+    enum: ['cash', 'credit_card', 'debit_card', 'bank_transfer', 'digital_wallet', 'other'],
+    example: 'credit_card',
+  })
+  @IsEnum(['cash', 'credit_card', 'debit_card', 'bank_transfer', 'digital_wallet', 'other'])
+  paymentMethod: 'cash' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'digital_wallet' | 'other';
+
+  @ApiProperty({
+    description: 'Whether the transaction is recurring',
+    example: false,
+    default: false,
+    required: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  isRecurring?: boolean = false;
+
+  @ApiProperty({
+    description: 'How often the transaction recurs',
+    enum: ['daily', 'weekly', 'monthly', 'yearly'],
+    example: 'monthly',
+    required: false,
+  })
+  @IsEnum(['daily', 'weekly', 'monthly', 'yearly'])
+  @IsOptional()
+  recurringFrequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+  @ApiProperty({
+    description: 'Additional notes for the transaction',
+    example: 'Weekly grocery shopping',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  notes?: string;
+}
+
+export class UpdateTransactionDto {
+  @ApiProperty({
+    description: 'Transaction amount',
+    example: 85.50,
+    minimum: 0,
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  amount?: number;
+
+  @ApiProperty({
+    description: 'Currency code',
+    example: 'USD',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  currency?: string;
+
+  @ApiProperty({
+    description: 'Transaction type',
+    enum: ['income', 'expense'],
+    example: 'expense',
+    required: false,
+  })
+  @IsEnum(['income', 'expense'])
+  @IsOptional()
+  type?: 'income' | 'expense';
+
+  @ApiProperty({
+    description: 'Transaction category',
+    example: 'Groceries',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  category?: string;
+
+  @ApiProperty({
+    description: 'Transaction subcategory',
+    example: 'Organic Foods',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  subcategory?: string;
+
+  @ApiProperty({
+    description: 'Transaction description',
+    example: 'Grocery shopping at Whole Foods',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @ApiProperty({
+    description: 'Transaction date',
+    example: '2025-01-15',
+    format: 'date',
+    required: false,
+  })
+  @IsDateString()
+  @IsOptional()
+  date?: string;
+
+  @ApiProperty({
+    description: 'Payment method used',
+    enum: ['cash', 'credit_card', 'debit_card', 'bank_transfer', 'digital_wallet', 'other'],
+    example: 'credit_card',
+    required: false,
+  })
+  @IsEnum(['cash', 'credit_card', 'debit_card', 'bank_transfer', 'digital_wallet', 'other'])
+  @IsOptional()
+  paymentMethod?: 'cash' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'digital_wallet' | 'other';
+
+  @ApiProperty({
+    description: 'Whether the transaction is recurring',
+    example: false,
+    required: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  isRecurring?: boolean;
+
+  @ApiProperty({
+    description: 'How often the transaction recurs',
+    enum: ['daily', 'weekly', 'monthly', 'yearly'],
+    example: 'monthly',
+    required: false,
+  })
+  @IsEnum(['daily', 'weekly', 'monthly', 'yearly'])
+  @IsOptional()
+  recurringFrequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+  @ApiProperty({
+    description: 'Additional notes for the transaction',
+    example: 'Weekly grocery shopping',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  notes?: string;
+}
