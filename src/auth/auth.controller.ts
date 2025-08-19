@@ -1,9 +1,8 @@
-import { Controller, Post, UseGuards, Request, Body, Get, Res } from '@nestjs/common';
+import { Controller, Post, UseGuards, Request, Body, Get, Res, Redirect } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard, JwtAuthGuard, GoogleAuthGuard } from './guards/auth.guards';
 import { CreateUserDto, LoginUserDto } from '../users/dto/user.dto';
-import { Response } from 'express';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -48,12 +47,13 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Google OAuth callback' })
   @ApiResponse({ status: 302, description: 'Redirects to frontend with token' })
-  async googleAuthRedirect(@Request() req, @Res() res: Response) {
+  @Redirect('http://localhost:3000/auth/success', 302)
+  async googleAuthRedirect(@Request() req) {
     const result = await this.authService.login(req.user);
     
     // Redirect to frontend with token
     const redirectUrl = `http://localhost:3000/auth/success?token=${result.access_token}`;
-    res.redirect(redirectUrl);
+    return { url: redirectUrl };
   }
 
   @UseGuards(JwtAuthGuard)

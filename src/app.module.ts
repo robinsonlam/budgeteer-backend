@@ -11,8 +11,7 @@ import { ConstantsController } from './common/constants.controller';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env',
+      isGlobal: true
     }),
     DatabaseModule,
     AuthModule,
