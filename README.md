@@ -49,7 +49,12 @@ A simple NestJS service with MongoDB and authentication flows (local email/passw
    ```
 
 2. **Environment variables**:
-   Copy `.env` file and update the values:
+   Copy `.env.example` to `.env` and update the values:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Then edit `.env` with your actual values:
    ```bash
    # MongoDB
    MONGODB_URI=mongodb://localhost:27017/budgeteer
