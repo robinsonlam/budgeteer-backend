@@ -4,6 +4,7 @@ import { Transaction } from './interfaces/transaction.interface';
 import { CreateTransactionDto, UpdateTransactionDto } from './dto/transaction.dto';
 import { BudgetsService } from '../budgets/budgets.service';
 import { ObjectId } from 'mongodb';
+import { TransactionType } from '../common/enums';
 
 @Injectable()
 export class TransactionsService {
@@ -24,7 +25,6 @@ export class TransactionsService {
       userId: new ObjectId(userId),
       budgetId: new ObjectId(createTransactionDto.budgetId),
       amount: createTransactionDto.amount,
-      currency: createTransactionDto.currency,
       type: createTransactionDto.type,
       category: createTransactionDto.category,
       subcategory: createTransactionDto.subcategory,
@@ -39,21 +39,13 @@ export class TransactionsService {
     };
 
     const result = await this.collection.insertOne(transaction as Transaction);
-    
-    // Update budget spent amount if it's an expense
-    if (createTransactionDto.type === 'expense') {
-      await this.budgetsService.updateSpentAmount(createTransactionDto.budgetId, createTransactionDto.amount);
-    } else if (createTransactionDto.type === 'income') {
-      // For income, we reduce the spent amount (negative expense)
-      await this.budgetsService.updateSpentAmount(createTransactionDto.budgetId, -createTransactionDto.amount);
-    }
 
     return { ...transaction, _id: result.insertedId };
   }
 
   async findAll(userId: string, budgetId?: string): Promise<Transaction[]> {
     const filter: any = { userId: new ObjectId(userId) };
-    
+
     if (budgetId) {
       filter.budgetId = new ObjectId(budgetId);
     }
@@ -62,7 +54,7 @@ export class TransactionsService {
   }
 
   async findOne(id: string, userId: string): Promise<Transaction> {
-    const transaction = await this.collection.findOne({ 
+    const transaction = await this.collection.findOne({
       _id: new ObjectId(id),
       userId: new ObjectId(userId)
     });
@@ -75,8 +67,6 @@ export class TransactionsService {
   }
 
   async update(id: string, userId: string, updateTransactionDto: UpdateTransactionDto): Promise<Transaction> {
-    const existingTransaction = await this.findOne(id, userId);
-    
     const updateData: any = {
       ...updateTransactionDto,
       updatedAt: new Date(),
@@ -85,17 +75,6 @@ export class TransactionsService {
     // Convert date string to Date object if provided
     if (updateTransactionDto.date) {
       updateData.date = new Date(updateTransactionDto.date);
-    }
-
-    // If amount or type is being updated, adjust budget accordingly
-    if (updateTransactionDto.amount !== undefined || updateTransactionDto.type !== undefined) {
-      const oldAmount = existingTransaction.type === 'expense' ? existingTransaction.amount : -existingTransaction.amount;
-      const newAmount = (updateTransactionDto.type || existingTransaction.type) === 'expense' 
-        ? (updateTransactionDto.amount || existingTransaction.amount)
-        : -(updateTransactionDto.amount || existingTransaction.amount);
-      
-      const amountDifference = newAmount - oldAmount;
-      await this.budgetsService.updateSpentAmount(existingTransaction.budgetId.toString(), amountDifference);
     }
 
     await this.collection.updateOne(
@@ -107,9 +86,7 @@ export class TransactionsService {
   }
 
   async remove(id: string, userId: string): Promise<void> {
-    const transaction = await this.findOne(id, userId);
-    
-    const result = await this.collection.deleteOne({ 
+    const result = await this.collection.deleteOne({
       _id: new ObjectId(id),
       userId: new ObjectId(userId)
     });
@@ -117,17 +94,13 @@ export class TransactionsService {
     if (result.deletedCount === 0) {
       throw new NotFoundException('Transaction not found');
     }
-
-    // Reverse the budget amount change
-    const amountToReverse = transaction.type === 'expense' ? -transaction.amount : transaction.amount;
-    await this.budgetsService.updateSpentAmount(transaction.budgetId.toString(), amountToReverse);
   }
 
   async findByBudget(budgetId: string, userId: string): Promise<Transaction[]> {
     // Verify budget belongs to user
     await this.budgetsService.findOne(budgetId, userId);
-    
-    return this.collection.find({ 
+
+    return this.collection.find({
       budgetId: new ObjectId(budgetId),
       userId: new ObjectId(userId)
     }).sort({ date: -1 }).toArray();
@@ -135,20 +108,20 @@ export class TransactionsService {
 
   async getTransactionSummary(userId: string, budgetId?: string): Promise<any> {
     const filter: any = { userId: new ObjectId(userId) };
-    
+
     if (budgetId) {
       filter.budgetId = new ObjectId(budgetId);
     }
 
     const transactions = await this.collection.find(filter).toArray();
-    
+
     const summary = {
       totalTransactions: transactions.length,
       totalIncome: transactions
-        .filter(t => t.type === 'income')
+        .filter(t => t.type === TransactionType.INCOME)
         .reduce((sum, t) => sum + t.amount, 0),
       totalExpenses: transactions
-        .filter(t => t.type === 'expense')
+        .filter(t => t.type === TransactionType.EXPENSE)
         .reduce((sum, t) => sum + t.amount, 0),
       netAmount: 0,
       transactionsByCategory: transactions.reduce((acc, transaction) => {
@@ -159,7 +132,7 @@ export class TransactionsService {
             count: 0
           };
         }
-        if (transaction.type === 'income') {
+        if (transaction.type === TransactionType.INCOME) {
           acc[transaction.category].income += transaction.amount;
         } else {
           acc[transaction.category].expenses += transaction.amount;

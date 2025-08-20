@@ -1,5 +1,6 @@
 import { IsString, IsNumber, IsDateString, IsEnum, IsOptional, IsBoolean, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { BudgetType } from '../../common/enums';
 
 export class CreateBudgetDto {
   @ApiProperty({
@@ -43,11 +44,11 @@ export class CreateBudgetDto {
 
   @ApiProperty({
     description: 'Budget period',
-    enum: ['weekly', 'monthly', 'yearly', 'custom'],
-    example: 'monthly',
+    enum: BudgetType,
+    example: BudgetType.MONTHLY,
   })
-  @IsEnum(['weekly', 'monthly', 'yearly', 'custom'])
-  period: 'weekly' | 'monthly' | 'yearly' | 'custom';
+  @IsEnum(BudgetType)
+  period: BudgetType;
 
   @ApiProperty({
     description: 'Budget start date',
@@ -126,13 +127,13 @@ export class UpdateBudgetDto {
 
   @ApiProperty({
     description: 'Budget period',
-    enum: ['weekly', 'monthly', 'yearly', 'custom'],
-    example: 'monthly',
+    enum: BudgetType,
+    example: BudgetType.MONTHLY,
     required: false,
   })
-  @IsEnum(['weekly', 'monthly', 'yearly', 'custom'])
+  @IsEnum(BudgetType)
   @IsOptional()
-  period?: 'weekly' | 'monthly' | 'yearly' | 'custom';
+  period?: BudgetType;
 
   @ApiProperty({
     description: 'Budget start date',
