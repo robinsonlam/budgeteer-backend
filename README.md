@@ -9,7 +9,6 @@ A simple NestJS service with MongoDB and authentication flows (local email/passw
 - **Budget Management**: Create, read, update, delete budgets
 - **Transaction Tracking**: Record income and expenses
 - **Budget-Transaction Relationship**: Link transactions to specific budgets
-- **Real-time Budget Updates**: Automatically update budget spent amounts
 - **MongoDB**: Native MongoDB driver (no Mongoose)
 - **JWT**: JWT-based authentication
 - **TypeScript**: Full TypeScript support
@@ -23,7 +22,6 @@ A simple NestJS service with MongoDB and authentication flows (local email/passw
 
 ### Budget
 - Budget details (name, description, total amount)
-- Financial tracking (spent amount, remaining amount)
 - Time period management (start/end dates, period type)
 - Categories and currency support
 - Relationships: Belongs to a user, can have multiple transactions

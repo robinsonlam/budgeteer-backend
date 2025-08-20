@@ -18,8 +18,6 @@ export class BudgetsService {
       name: createBudgetDto.name,
       description: createBudgetDto.description,
       totalAmount: createBudgetDto.totalAmount,
-      spentAmount: 0,
-      remainingAmount: createBudgetDto.totalAmount,
       currency: createBudgetDto.currency,
       category: createBudgetDto.category,
       period: createBudgetDto.period,
@@ -52,8 +50,6 @@ export class BudgetsService {
   }
 
   async update(id: string, userId: string, updateBudgetDto: UpdateBudgetDto): Promise<Budget> {
-    const existingBudget = await this.findOne(id, userId);
-
     const updateData: any = {
       ...updateBudgetDto,
       updatedAt: new Date(),
@@ -65,11 +61,6 @@ export class BudgetsService {
     }
     if (updateBudgetDto.endDate) {
       updateData.endDate = new Date(updateBudgetDto.endDate);
-    }
-
-    // Recalculate remaining amount if total amount is updated
-    if (updateBudgetDto.totalAmount !== undefined) {
-      updateData.remainingAmount = updateBudgetDto.totalAmount - existingBudget.spentAmount;
     }
 
     await this.collection.updateOne(
@@ -91,27 +82,6 @@ export class BudgetsService {
     }
   }
 
-  async updateSpentAmount(budgetId: string, amount: number): Promise<void> {
-    const budget = await this.collection.findOne({ _id: new ObjectId(budgetId) });
-    if (!budget) {
-      throw new NotFoundException('Budget not found');
-    }
-
-    const newSpentAmount = budget.spentAmount + amount;
-    const newRemainingAmount = budget.totalAmount - newSpentAmount;
-
-    await this.collection.updateOne(
-      { _id: new ObjectId(budgetId) },
-      { 
-        $set: { 
-          spentAmount: newSpentAmount,
-          remainingAmount: newRemainingAmount,
-          updatedAt: new Date()
-        }
-      }
-    );
-  }
-
   async findActiveByUserId(userId: string): Promise<Budget[]> {
     return this.collection.find({ 
       userId: new ObjectId(userId),
@@ -127,20 +97,14 @@ export class BudgetsService {
     const summary = {
       totalBudgets: budgets.length,
       totalAllocated: budgets.reduce((sum, budget) => sum + budget.totalAmount, 0),
-      totalSpent: budgets.reduce((sum, budget) => sum + budget.spentAmount, 0),
-      totalRemaining: budgets.reduce((sum, budget) => sum + budget.remainingAmount, 0),
       budgetsByCategory: budgets.reduce((acc, budget) => {
         if (!acc[budget.category]) {
           acc[budget.category] = {
             totalAmount: 0,
-            spentAmount: 0,
-            remainingAmount: 0,
             count: 0
           };
         }
         acc[budget.category].totalAmount += budget.totalAmount;
-        acc[budget.category].spentAmount += budget.spentAmount;
-        acc[budget.category].remainingAmount += budget.remainingAmount;
         acc[budget.category].count += 1;
         return acc;
       }, {} as any)

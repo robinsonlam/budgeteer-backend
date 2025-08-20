@@ -7,8 +7,6 @@ export interface Budget {
   name: string;
   description?: string;
   totalAmount: number;
-  spentAmount: number;
-  remainingAmount: number;
   currency: string;
   category: string;
   period: BudgetType;
