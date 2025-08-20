@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import { BudgetType } from '../../common/enums';
 
 export interface Budget {
   _id?: ObjectId;
@@ -10,7 +11,7 @@ export interface Budget {
   remainingAmount: number;
   currency: string;
   category: string;
-  period: 'weekly' | 'monthly' | 'yearly' | 'custom';
+  period: BudgetType;
   startDate: Date;
   endDate: Date;
   isActive: boolean;

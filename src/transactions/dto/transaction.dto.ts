@@ -1,5 +1,6 @@
 import { IsString, IsNumber, IsDateString, IsEnum, IsOptional, IsBoolean, IsArray, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { TransactionType, PaymentMethod, RecurringFrequency } from '../../common/enums';
 
 export class CreateTransactionDto {
   @ApiProperty({
@@ -19,11 +20,11 @@ export class CreateTransactionDto {
 
   @ApiProperty({
     description: 'Transaction type',
-    enum: ['income', 'expense'],
-    example: 'expense',
+    enum: TransactionType,
+    example: TransactionType.EXPENSE,
   })
-  @IsEnum(['income', 'expense'])
-  type: 'income' | 'expense';
+  @IsEnum(TransactionType)
+  type: TransactionType;
 
   @ApiProperty({
     description: 'Transaction category',
@@ -60,12 +61,12 @@ export class CreateTransactionDto {
 
   @ApiProperty({
     description: 'Payment method used',
-    enum: ['cash', 'credit_card', 'debit_card', 'bank_transfer', 'digital_wallet', 'other'],
-    example: 'credit_card',
+    enum: PaymentMethod,
+    example: PaymentMethod.CREDIT_CARD,
   })
-  @IsEnum(['cash', 'credit_card', 'debit_card', 'bank_transfer', 'digital_wallet', 'other'])
+  @IsEnum(PaymentMethod)
   @IsOptional()
-  paymentMethod?: 'cash' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'digital_wallet' | 'other';
+  paymentMethod?: PaymentMethod;
 
   @ApiProperty({
     description: 'Whether the transaction is recurring',
@@ -79,13 +80,13 @@ export class CreateTransactionDto {
 
   @ApiProperty({
     description: 'How often the transaction recurs',
-    enum: ['daily', 'weekly', 'monthly', 'yearly'],
-    example: 'monthly',
+    enum: RecurringFrequency,
+    example: RecurringFrequency.MONTHLY,
     required: false,
   })
-  @IsEnum(['daily', 'weekly', 'monthly', 'yearly'])
+  @IsEnum(RecurringFrequency)
   @IsOptional()
-  recurringFrequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  recurringFrequency?: RecurringFrequency;
 
   @ApiProperty({
     description: 'Additional notes for the transaction',
@@ -119,13 +120,13 @@ export class UpdateTransactionDto {
 
   @ApiProperty({
     description: 'Transaction type',
-    enum: ['income', 'expense'],
-    example: 'expense',
+    enum: TransactionType,
+    example: TransactionType.EXPENSE,
     required: false,
   })
-  @IsEnum(['income', 'expense'])
+  @IsEnum(TransactionType)
   @IsOptional()
-  type?: 'income' | 'expense';
+  type?: TransactionType;
 
   @ApiProperty({
     description: 'Transaction category',
@@ -166,13 +167,13 @@ export class UpdateTransactionDto {
 
   @ApiProperty({
     description: 'Payment method used',
-    enum: ['cash', 'credit_card', 'debit_card', 'bank_transfer', 'digital_wallet', 'other'],
-    example: 'credit_card',
+    enum: PaymentMethod,
+    example: PaymentMethod.CREDIT_CARD,
     required: false,
   })
-  @IsEnum(['cash', 'credit_card', 'debit_card', 'bank_transfer', 'digital_wallet', 'other'])
+  @IsEnum(PaymentMethod)
   @IsOptional()
-  paymentMethod?: 'cash' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'digital_wallet' | 'other';
+  paymentMethod?: PaymentMethod;
 
   @ApiProperty({
     description: 'Whether the transaction is recurring',
@@ -185,13 +186,13 @@ export class UpdateTransactionDto {
 
   @ApiProperty({
     description: 'How often the transaction recurs',
-    enum: ['daily', 'weekly', 'monthly', 'yearly'],
-    example: 'monthly',
+    enum: RecurringFrequency,
+    example: RecurringFrequency.MONTHLY,
     required: false,
   })
-  @IsEnum(['daily', 'weekly', 'monthly', 'yearly'])
+  @IsEnum(RecurringFrequency)
   @IsOptional()
-  recurringFrequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  recurringFrequency?: RecurringFrequency;
 
   @ApiProperty({
     description: 'Additional notes for the transaction',

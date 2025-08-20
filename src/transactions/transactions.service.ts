@@ -4,6 +4,7 @@ import { Transaction } from './interfaces/transaction.interface';
 import { CreateTransactionDto, UpdateTransactionDto } from './dto/transaction.dto';
 import { BudgetsService } from '../budgets/budgets.service';
 import { ObjectId } from 'mongodb';
+import { TransactionType } from '../common/enums';
 
 @Injectable()
 export class TransactionsService {
@@ -40,9 +41,9 @@ export class TransactionsService {
     const result = await this.collection.insertOne(transaction as Transaction);
     
     // Update budget spent amount if it's an expense
-    if (createTransactionDto.type === 'expense') {
+    if (createTransactionDto.type === TransactionType.EXPENSE) {
       await this.budgetsService.updateSpentAmount(createTransactionDto.budgetId, createTransactionDto.amount);
-    } else if (createTransactionDto.type === 'income') {
+    } else if (createTransactionDto.type === TransactionType.INCOME) {
       // For income, we reduce the spent amount (negative expense)
       await this.budgetsService.updateSpentAmount(createTransactionDto.budgetId, -createTransactionDto.amount);
     }
@@ -88,8 +89,8 @@ export class TransactionsService {
 
     // If amount or type is being updated, adjust budget accordingly
     if (updateTransactionDto.amount !== undefined || updateTransactionDto.type !== undefined) {
-      const oldAmount = existingTransaction.type === 'expense' ? existingTransaction.amount : -existingTransaction.amount;
-      const newAmount = (updateTransactionDto.type || existingTransaction.type) === 'expense' 
+      const oldAmount = existingTransaction.type === TransactionType.EXPENSE ? existingTransaction.amount : -existingTransaction.amount;
+      const newAmount = (updateTransactionDto.type || existingTransaction.type) === TransactionType.EXPENSE 
         ? (updateTransactionDto.amount || existingTransaction.amount)
         : -(updateTransactionDto.amount || existingTransaction.amount);
       
@@ -118,7 +119,7 @@ export class TransactionsService {
     }
 
     // Reverse the budget amount change
-    const amountToReverse = transaction.type === 'expense' ? -transaction.amount : transaction.amount;
+    const amountToReverse = transaction.type === TransactionType.EXPENSE ? -transaction.amount : transaction.amount;
     await this.budgetsService.updateSpentAmount(transaction.budgetId.toString(), amountToReverse);
   }
 
@@ -144,10 +145,10 @@ export class TransactionsService {
     const summary = {
       totalTransactions: transactions.length,
       totalIncome: transactions
-        .filter(t => t.type === 'income')
+        .filter(t => t.type === TransactionType.INCOME)
         .reduce((sum, t) => sum + t.amount, 0),
       totalExpenses: transactions
-        .filter(t => t.type === 'expense')
+        .filter(t => t.type === TransactionType.EXPENSE)
         .reduce((sum, t) => sum + t.amount, 0),
       netAmount: 0,
       transactionsByCategory: transactions.reduce((acc, transaction) => {
@@ -158,7 +159,7 @@ export class TransactionsService {
             count: 0
           };
         }
-        if (transaction.type === 'income') {
+        if (transaction.type === TransactionType.INCOME) {
           acc[transaction.category].income += transaction.amount;
         } else {
           acc[transaction.category].expenses += transaction.amount;
