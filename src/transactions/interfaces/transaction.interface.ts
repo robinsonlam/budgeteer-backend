@@ -5,7 +5,6 @@ export interface Transaction {
   userId: ObjectId;
   budgetId: ObjectId;
   amount: number;
-  currency: string;
   type: 'income' | 'expense';
   category: string;
   subcategory?: string;

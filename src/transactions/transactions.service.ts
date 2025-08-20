@@ -24,7 +24,6 @@ export class TransactionsService {
       userId: new ObjectId(userId),
       budgetId: new ObjectId(createTransactionDto.budgetId),
       amount: createTransactionDto.amount,
-      currency: createTransactionDto.currency,
       type: createTransactionDto.type,
       category: createTransactionDto.category,
       subcategory: createTransactionDto.subcategory,

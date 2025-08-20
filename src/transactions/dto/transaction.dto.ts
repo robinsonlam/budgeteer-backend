@@ -18,13 +18,6 @@ export class CreateTransactionDto {
   amount: number;
 
   @ApiProperty({
-    description: 'Currency code',
-    example: 'USD',
-  })
-  @IsString()
-  currency: string;
-
-  @ApiProperty({
     description: 'Transaction type',
     enum: ['income', 'expense'],
     example: 'expense',
@@ -37,7 +30,8 @@ export class CreateTransactionDto {
     example: 'Groceries',
   })
   @IsString()
-  category: string;
+  @IsOptional()
+  category?: string;
 
   @ApiProperty({
     description: 'Transaction subcategory',
@@ -53,6 +47,7 @@ export class CreateTransactionDto {
     example: 'Grocery shopping at Whole Foods',
   })
   @IsString()
+  @IsOptional()
   description: string;
 
   @ApiProperty({
@@ -69,7 +64,8 @@ export class CreateTransactionDto {
     example: 'credit_card',
   })
   @IsEnum(['cash', 'credit_card', 'debit_card', 'bank_transfer', 'digital_wallet', 'other'])
-  paymentMethod: 'cash' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'digital_wallet' | 'other';
+  @IsOptional()
+  paymentMethod?: 'cash' | 'credit_card' | 'debit_card' | 'bank_transfer' | 'digital_wallet' | 'other';
 
   @ApiProperty({
     description: 'Whether the transaction is recurring',
