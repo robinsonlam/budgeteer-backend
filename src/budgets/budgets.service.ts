@@ -17,12 +17,7 @@ export class BudgetsService {
       userId: new ObjectId(userId),
       name: createBudgetDto.name,
       description: createBudgetDto.description,
-      totalAmount: createBudgetDto.totalAmount,
-      currency: createBudgetDto.currency,
-      category: createBudgetDto.category,
-      period: createBudgetDto.period,
       startDate: new Date(createBudgetDto.startDate),
-      endDate: new Date(createBudgetDto.endDate),
       isActive: createBudgetDto.isActive ?? true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -59,9 +54,6 @@ export class BudgetsService {
     if (updateBudgetDto.startDate) {
       updateData.startDate = new Date(updateBudgetDto.startDate);
     }
-    if (updateBudgetDto.endDate) {
-      updateData.endDate = new Date(updateBudgetDto.endDate);
-    }
 
     await this.collection.updateOne(
       { _id: new ObjectId(id), userId: new ObjectId(userId) },
@@ -86,8 +78,7 @@ export class BudgetsService {
     return this.collection.find({ 
       userId: new ObjectId(userId),
       isActive: true,
-      startDate: { $lte: new Date() },
-      endDate: { $gte: new Date() }
+      startDate: { $lte: new Date() }
     }).toArray();
   }
 
@@ -96,18 +87,13 @@ export class BudgetsService {
     
     const summary = {
       totalBudgets: budgets.length,
-      totalAllocated: budgets.reduce((sum, budget) => sum + budget.totalAmount, 0),
-      budgetsByCategory: budgets.reduce((acc, budget) => {
-        if (!acc[budget.category]) {
-          acc[budget.category] = {
-            totalAmount: 0,
-            count: 0
-          };
-        }
-        acc[budget.category].totalAmount += budget.totalAmount;
-        acc[budget.category].count += 1;
-        return acc;
-      }, {} as any)
+      budgets: budgets.map(budget => ({
+        _id: budget._id,
+        name: budget.name,
+        description: budget.description,
+        startDate: budget.startDate,
+        isActive: budget.isActive
+      }))
     };
 
     return summary;
