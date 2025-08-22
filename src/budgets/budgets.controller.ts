@@ -52,6 +52,7 @@ export class BudgetsController {
     return this.budgetsService.getBudgetSummary(req.user.userId);
   }
 
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific budget by ID' })
   @ApiResponse({ status: 200, description: 'Returns the budget' })
@@ -60,6 +61,17 @@ export class BudgetsController {
   @ApiParam({ name: 'id', description: 'Budget ID' })
   findOne(@Param('id') id: string, @Request() req) {
     return this.budgetsService.findOne(id, req.user.userId);
+  }
+
+  @Get(':id/metrics')
+  @ApiOperation({ summary: 'Get metrics for a specific budget' })
+  @ApiResponse({ status: 200, description: 'Returns budget metrics' })
+  @ApiResponse({ status: 404, description: 'Budget not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiParam({ name: 'id', description: 'Budget ID' })
+  @ApiQuery({ name: 'metric', required: false, description: 'Metric(s) to fetch (e.g. totalBalance). Can be repeated for multiple metrics.', isArray: true })
+  getMetrics(@Param('id') id: string, @Request() req, @Query('metric') metric?: string | string[]) {
+    return this.budgetsService.getMetrics(id, req.user.userId, metric);
   }
 
   @Patch(':id')

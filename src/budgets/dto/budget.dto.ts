@@ -1,4 +1,4 @@
-import { IsString, IsDateString, IsOptional, IsBoolean } from 'class-validator';
+import { IsString, IsDateString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateBudgetDto {
@@ -18,8 +18,6 @@ export class CreateBudgetDto {
   @IsOptional()
   description?: string;
 
-
-
   @ApiProperty({
     description: 'Budget start date',
     example: '2025-01-01',
@@ -27,6 +25,16 @@ export class CreateBudgetDto {
   })
   @IsDateString()
   startDate: string;
+
+  @ApiProperty({
+    description: 'Starting balance for the budget',
+    example: 0,
+    required: false,
+    default: 0,
+  })
+  @IsNumber()
+  @IsOptional()
+  startBalance?: number;
 
   @ApiProperty({
     description: 'Whether the budget is active',
@@ -58,8 +66,6 @@ export class UpdateBudgetDto {
   @IsOptional()
   description?: string;
 
-
-
   @ApiProperty({
     description: 'Budget start date',
     example: '2025-01-01',
@@ -69,6 +75,16 @@ export class UpdateBudgetDto {
   @IsDateString()
   @IsOptional()
   startDate?: string;
+
+  @ApiProperty({
+    description: 'Starting balance for the budget',
+    example: 0,
+    required: false,
+    default: 0,
+  })
+  @IsNumber()
+  @IsOptional()
+  startBalance?: number;
 
   @ApiProperty({
     description: 'Whether the budget is active',

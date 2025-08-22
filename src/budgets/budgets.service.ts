@@ -1,12 +1,17 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { normalizePositiveNumber } from './utils';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { Budget } from './interfaces/budget.interface';
 import { CreateBudgetDto, UpdateBudgetDto } from './dto/budget.dto';
 import { ObjectId } from 'mongodb';
+import { MetricsService, TotalBalanceParams } from '../metrics/metrics.service';
 
 @Injectable()
 export class BudgetsService {
-  constructor(private databaseService: DatabaseService) {}
+  constructor(
+    private databaseService: DatabaseService,
+    private metricsService: MetricsService,
+  ) {}
 
   private get collection() {
     return this.databaseService.getDb().collection<Budget>('budgets');
@@ -19,6 +24,7 @@ export class BudgetsService {
       description: createBudgetDto.description,
       startDate: new Date(createBudgetDto.startDate),
       isActive: createBudgetDto.isActive ?? true,
+      startBalance: normalizePositiveNumber(createBudgetDto.startBalance),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -49,6 +55,10 @@ export class BudgetsService {
       ...updateBudgetDto,
       updatedAt: new Date(),
     };
+    // Only update startBalance if provided (not undefined)
+    if (updateBudgetDto.startBalance !== undefined) {
+      updateData.startBalance = normalizePositiveNumber(updateBudgetDto.startBalance);
+    }
 
     // Convert date strings to Date objects if provided
     if (updateBudgetDto.startDate) {
@@ -84,7 +94,6 @@ export class BudgetsService {
 
   async getBudgetSummary(userId: string): Promise<any> {
     const budgets = await this.findActiveByUserId(userId);
-    
     const summary = {
       totalBudgets: budgets.length,
       budgets: budgets.map(budget => ({
@@ -95,7 +104,32 @@ export class BudgetsService {
         isActive: budget.isActive
       }))
     };
-
     return summary;
+  }
+
+  async getMetrics(id: string, userId: string, metric?: string | string[]): Promise<any> {
+    const budget = await this.findOne(id, userId);
+    
+    // Create properly typed parameters for MetricsService
+    const balanceParams: TotalBalanceParams = {
+      _id: budget._id!,
+      startBalance: budget.startBalance
+    };
+    
+    // Always calculate totalBalance using MetricsService
+    const totalBalance = await this.metricsService.calculateTotalBalance(balanceParams);
+    
+    const allMetrics = { totalBalance };
+    if (!metric) {
+      return allMetrics;
+    }
+    const requested = Array.isArray(metric) ? metric : [metric];
+    const result: Record<string, any> = {};
+    for (const m of requested) {
+      if (m in allMetrics) {
+        result[m] = allMetrics[m];
+      }
+    }
+    return result;
   }
 }
