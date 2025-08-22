@@ -1,6 +1,5 @@
-import { IsString, IsNumber, IsDateString, IsEnum, IsOptional, IsBoolean, Min } from 'class-validator';
+import { IsString, IsDateString, IsOptional, IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { BudgetType } from '../../common/enums';
 
 export class CreateBudgetDto {
   @ApiProperty({
@@ -19,36 +18,7 @@ export class CreateBudgetDto {
   @IsOptional()
   description?: string;
 
-  @ApiProperty({
-    description: 'Total budget amount',
-    example: 500.00,
-    minimum: 0,
-  })
-  @IsNumber()
-  @Min(0)
-  totalAmount: number;
 
-  @ApiProperty({
-    description: 'Currency code',
-    example: 'USD',
-  })
-  @IsString()
-  currency: string;
-
-  @ApiProperty({
-    description: 'Budget category',
-    example: 'Food & Dining',
-  })
-  @IsString()
-  category: string;
-
-  @ApiProperty({
-    description: 'Budget period',
-    enum: BudgetType,
-    example: BudgetType.MONTHLY,
-  })
-  @IsEnum(BudgetType)
-  period: BudgetType;
 
   @ApiProperty({
     description: 'Budget start date',
@@ -57,14 +27,6 @@ export class CreateBudgetDto {
   })
   @IsDateString()
   startDate: string;
-
-  @ApiProperty({
-    description: 'Budget end date',
-    example: '2025-01-31',
-    format: 'date',
-  })
-  @IsDateString()
-  endDate: string;
 
   @ApiProperty({
     description: 'Whether the budget is active',
@@ -96,44 +58,7 @@ export class UpdateBudgetDto {
   @IsOptional()
   description?: string;
 
-  @ApiProperty({
-    description: 'Total budget amount',
-    example: 500.00,
-    minimum: 0,
-    required: false,
-  })
-  @IsNumber()
-  @Min(0)
-  @IsOptional()
-  totalAmount?: number;
 
-  @ApiProperty({
-    description: 'Currency code',
-    example: 'USD',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  currency?: string;
-
-  @ApiProperty({
-    description: 'Budget category',
-    example: 'Food & Dining',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  category?: string;
-
-  @ApiProperty({
-    description: 'Budget period',
-    enum: BudgetType,
-    example: BudgetType.MONTHLY,
-    required: false,
-  })
-  @IsEnum(BudgetType)
-  @IsOptional()
-  period?: BudgetType;
 
   @ApiProperty({
     description: 'Budget start date',
@@ -144,16 +69,6 @@ export class UpdateBudgetDto {
   @IsDateString()
   @IsOptional()
   startDate?: string;
-
-  @ApiProperty({
-    description: 'Budget end date',
-    example: '2025-01-31',
-    format: 'date',
-    required: false,
-  })
-  @IsDateString()
-  @IsOptional()
-  endDate?: string;
 
   @ApiProperty({
     description: 'Whether the budget is active',
