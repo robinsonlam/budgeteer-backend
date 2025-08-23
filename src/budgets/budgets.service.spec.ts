@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BudgetsService } from './budgets.service';
 import { DatabaseService } from '../database/database.service';
 import { MetricsService } from '../metrics/metrics.service';
+import { ProjectionsService } from '../projections/projections.service';
 import { ObjectId } from 'mongodb';
 import { Budget } from './interfaces/budget.interface';
 
@@ -9,6 +10,7 @@ describe('BudgetsService', () => {
   let budgetsService: BudgetsService;
   let mockDbService: any;
   let mockMetricsService: any;
+  let mockProjectionsService: any;
 
   beforeEach(async () => {
     mockDbService = {
@@ -27,6 +29,12 @@ describe('BudgetsService', () => {
       calculateTotalBalance: jest.fn(),
       calculateMonthlyIncomeMedian: jest.fn(),
       calculateMonthlyExpenseMedian: jest.fn(),
+      calculateTotalIncome: jest.fn(),
+      calculateTotalExpenses: jest.fn(),
+      calculateNetAmount: jest.fn(),
+    };
+
+    mockProjectionsService = {
       calculateProjectedYearEndBalance: jest.fn(),
     };
 
@@ -35,6 +43,7 @@ describe('BudgetsService', () => {
         BudgetsService,
         { provide: DatabaseService, useValue: mockDbService },
         { provide: MetricsService, useValue: mockMetricsService },
+        { provide: ProjectionsService, useValue: mockProjectionsService },
       ],
     }).compile();
 
@@ -59,7 +68,10 @@ describe('BudgetsService', () => {
       mockMetricsService.calculateTotalBalance.mockResolvedValue(5000);
       mockMetricsService.calculateMonthlyIncomeMedian.mockResolvedValue(3000);
       mockMetricsService.calculateMonthlyExpenseMedian.mockResolvedValue(2000);
-      mockMetricsService.calculateProjectedYearEndBalance.mockResolvedValue(9000);
+      mockMetricsService.calculateTotalIncome.mockResolvedValue(8000);
+      mockMetricsService.calculateTotalExpenses.mockResolvedValue(3000);
+      mockMetricsService.calculateNetAmount.mockResolvedValue(5000);
+      mockProjectionsService.calculateProjectedYearEndBalance.mockResolvedValue(9000);
     });
 
     it('should only calculate totalBalance when requested', async () => {
@@ -68,7 +80,7 @@ describe('BudgetsService', () => {
       expect(mockMetricsService.calculateTotalBalance).toHaveBeenCalledTimes(1);
       expect(mockMetricsService.calculateMonthlyIncomeMedian).not.toHaveBeenCalled();
       expect(mockMetricsService.calculateMonthlyExpenseMedian).not.toHaveBeenCalled();
-      expect(mockMetricsService.calculateProjectedYearEndBalance).not.toHaveBeenCalled();
+      expect(mockProjectionsService.calculateProjectedYearEndBalance).not.toHaveBeenCalled();
       expect(result).toEqual({ totalBalance: 5000 });
     });
 
@@ -78,7 +90,7 @@ describe('BudgetsService', () => {
       expect(mockMetricsService.calculateTotalBalance).not.toHaveBeenCalled();
       expect(mockMetricsService.calculateMonthlyIncomeMedian).toHaveBeenCalledTimes(1);
       expect(mockMetricsService.calculateMonthlyExpenseMedian).not.toHaveBeenCalled();
-      expect(mockMetricsService.calculateProjectedYearEndBalance).not.toHaveBeenCalled();
+      expect(mockProjectionsService.calculateProjectedYearEndBalance).not.toHaveBeenCalled();
       expect(result).toEqual({ monthlyIncomeMedian: 3000 });
     });
 
@@ -88,7 +100,7 @@ describe('BudgetsService', () => {
       expect(mockMetricsService.calculateTotalBalance).not.toHaveBeenCalled();
       expect(mockMetricsService.calculateMonthlyIncomeMedian).not.toHaveBeenCalled();
       expect(mockMetricsService.calculateMonthlyExpenseMedian).toHaveBeenCalledTimes(1);
-      expect(mockMetricsService.calculateProjectedYearEndBalance).not.toHaveBeenCalled();
+      expect(mockProjectionsService.calculateProjectedYearEndBalance).not.toHaveBeenCalled();
       expect(result).toEqual({ monthlyExpenseMedian: 2000 });
     });
 
@@ -98,7 +110,7 @@ describe('BudgetsService', () => {
       expect(mockMetricsService.calculateTotalBalance).toHaveBeenCalledTimes(1);
       expect(mockMetricsService.calculateMonthlyIncomeMedian).toHaveBeenCalledTimes(1);
       expect(mockMetricsService.calculateMonthlyExpenseMedian).not.toHaveBeenCalled();
-      expect(mockMetricsService.calculateProjectedYearEndBalance).not.toHaveBeenCalled();
+      expect(mockProjectionsService.calculateProjectedYearEndBalance).not.toHaveBeenCalled();
       expect(result).toEqual({ 
         totalBalance: 5000,
         monthlyIncomeMedian: 3000
@@ -111,12 +123,18 @@ describe('BudgetsService', () => {
       expect(mockMetricsService.calculateTotalBalance).toHaveBeenCalledTimes(1);
       expect(mockMetricsService.calculateMonthlyIncomeMedian).toHaveBeenCalledTimes(1);
       expect(mockMetricsService.calculateMonthlyExpenseMedian).toHaveBeenCalledTimes(1);
-      expect(mockMetricsService.calculateProjectedYearEndBalance).toHaveBeenCalledTimes(1);
+      expect(mockMetricsService.calculateTotalIncome).toHaveBeenCalledTimes(1);
+      expect(mockMetricsService.calculateTotalExpenses).toHaveBeenCalledTimes(1);
+      expect(mockMetricsService.calculateNetAmount).toHaveBeenCalledTimes(1);
+      expect(mockProjectionsService.calculateProjectedYearEndBalance).toHaveBeenCalledTimes(1);
       expect(result).toEqual({ 
         totalBalance: 5000,
         monthlyIncomeMedian: 3000,
         monthlyExpenseMedian: 2000,
-        projectedYearEndBalance: 9000
+        projectedYearEndBalance: 9000,
+        totalIncome: 8000,
+        totalExpenses: 3000,
+        netAmount: 5000
       });
     });
 
@@ -126,7 +144,7 @@ describe('BudgetsService', () => {
       expect(mockMetricsService.calculateTotalBalance).toHaveBeenCalledTimes(1);
       expect(mockMetricsService.calculateMonthlyIncomeMedian).not.toHaveBeenCalled();
       expect(mockMetricsService.calculateMonthlyExpenseMedian).not.toHaveBeenCalled();
-      expect(mockMetricsService.calculateProjectedYearEndBalance).not.toHaveBeenCalled();
+      expect(mockProjectionsService.calculateProjectedYearEndBalance).not.toHaveBeenCalled();
       expect(result).toEqual({ totalBalance: 5000 });
     });
 
@@ -136,7 +154,7 @@ describe('BudgetsService', () => {
       expect(mockMetricsService.calculateTotalBalance).not.toHaveBeenCalled();
       expect(mockMetricsService.calculateMonthlyIncomeMedian).not.toHaveBeenCalled();
       expect(mockMetricsService.calculateMonthlyExpenseMedian).not.toHaveBeenCalled();
-      expect(mockMetricsService.calculateProjectedYearEndBalance).not.toHaveBeenCalled();
+      expect(mockProjectionsService.calculateProjectedYearEndBalance).not.toHaveBeenCalled();
       expect(result).toEqual({});
     });
 
@@ -146,8 +164,8 @@ describe('BudgetsService', () => {
       expect(mockMetricsService.calculateTotalBalance).not.toHaveBeenCalled();
       expect(mockMetricsService.calculateMonthlyIncomeMedian).not.toHaveBeenCalled();
       expect(mockMetricsService.calculateMonthlyExpenseMedian).not.toHaveBeenCalled();
-      expect(mockMetricsService.calculateProjectedYearEndBalance).toHaveBeenCalledTimes(1);
-      expect(mockMetricsService.calculateProjectedYearEndBalance).toHaveBeenCalledWith({
+      expect(mockProjectionsService.calculateProjectedYearEndBalance).toHaveBeenCalledTimes(1);
+      expect(mockProjectionsService.calculateProjectedYearEndBalance).toHaveBeenCalledWith({
         _id: mockBudget._id,
         startBalance: mockBudget.startBalance
       });

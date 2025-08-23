@@ -120,6 +120,9 @@ describe('BudgetsController Metrics Integration', () => {
     expect(allMetrics).toHaveProperty('monthlyIncomeMedian'); 
     expect(allMetrics).toHaveProperty('monthlyExpenseMedian');
     expect(allMetrics).toHaveProperty('projectedYearEndBalance');
+    expect(allMetrics).toHaveProperty('totalIncome');
+    expect(allMetrics).toHaveProperty('totalExpenses');
+    expect(allMetrics).toHaveProperty('netAmount');
 
     // Test with single metric as string
     const singleMetric = await controller.getMetrics(budgetId.toString(), req, 'totalBalance');
@@ -141,5 +144,13 @@ describe('BudgetsController Metrics Integration', () => {
     expect(projectedMetric).not.toHaveProperty('totalBalance');
     expect(projectedMetric).not.toHaveProperty('monthlyIncomeMedian');
     expect(projectedMetric).not.toHaveProperty('monthlyExpenseMedian');
+
+    // Test with new transaction metrics
+    const transactionMetrics = await controller.getMetrics(budgetId.toString(), req, ['totalIncome', 'totalExpenses', 'netAmount']);
+    expect(transactionMetrics).toHaveProperty('totalIncome');
+    expect(transactionMetrics).toHaveProperty('totalExpenses');
+    expect(transactionMetrics).toHaveProperty('netAmount');
+    expect(transactionMetrics).not.toHaveProperty('totalBalance');
+    expect(transactionMetrics).not.toHaveProperty('monthlyIncomeMedian');
   });
 });

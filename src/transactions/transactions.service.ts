@@ -117,13 +117,6 @@ export class TransactionsService {
 
     const summary = {
       totalTransactions: transactions.length,
-      totalIncome: transactions
-        .filter(t => t.type === TransactionType.INCOME)
-        .reduce((sum, t) => sum + t.amount, 0),
-      totalExpenses: transactions
-        .filter(t => t.type === TransactionType.EXPENSE)
-        .reduce((sum, t) => sum + t.amount, 0),
-      netAmount: 0,
       transactionsByCategory: transactions.reduce((acc, transaction) => {
         if (!acc[transaction.category]) {
           acc[transaction.category] = {
@@ -144,8 +137,6 @@ export class TransactionsService {
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 10)
     };
-
-    summary.netAmount = summary.totalIncome - summary.totalExpenses;
 
     return summary;
   }

@@ -4,7 +4,7 @@ import { DatabaseService } from '../database/database.service';
 import { Budget } from './interfaces/budget.interface';
 import { CreateBudgetDto, UpdateBudgetDto } from './dto/budget.dto';
 import { ObjectId } from 'mongodb';
-import { MetricsService, TotalBalanceParams, MonthlyIncomeParams, MonthlyExpenseParams } from '../metrics/metrics.service';
+import { MetricsService, TotalBalanceParams, MonthlyIncomeParams, MonthlyExpenseParams, TotalIncomeParams, TotalExpensesParams, NetAmountParams } from '../metrics/metrics.service';
 import { ProjectionsService, ProjectedYearEndBalanceParams } from '../projections/projections.service';
 
 @Injectable()
@@ -117,7 +117,7 @@ export class BudgetsService {
     }
     
     // Determine which metrics to calculate
-    const requestedMetrics = metric ? (Array.isArray(metric) ? metric : [metric]) : ['totalBalance', 'monthlyIncomeMedian', 'monthlyExpenseMedian', 'projectedYearEndBalance'];
+    const requestedMetrics = metric ? (Array.isArray(metric) ? metric : [metric]) : ['totalBalance', 'monthlyIncomeMedian', 'monthlyExpenseMedian', 'projectedYearEndBalance', 'totalIncome', 'totalExpenses', 'netAmount'];
     
     const result: Record<string, any> = {};
     
@@ -152,6 +152,27 @@ export class BudgetsService {
             startBalance: budget.startBalance
           };
           result.projectedYearEndBalance = await this.projectionsService.calculateProjectedYearEndBalance(projectedBalanceParams);
+          break;
+          
+        case 'totalIncome':
+          const totalIncomeParams: TotalIncomeParams = {
+            _id: budget._id!
+          };
+          result.totalIncome = await this.metricsService.calculateTotalIncome(totalIncomeParams);
+          break;
+          
+        case 'totalExpenses':
+          const totalExpensesParams: TotalExpensesParams = {
+            _id: budget._id!
+          };
+          result.totalExpenses = await this.metricsService.calculateTotalExpenses(totalExpensesParams);
+          break;
+          
+        case 'netAmount':
+          const netAmountParams: NetAmountParams = {
+            _id: budget._id!
+          };
+          result.netAmount = await this.metricsService.calculateNetAmount(netAmountParams);
           break;
           
         // Ignore unknown metric names

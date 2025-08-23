@@ -16,6 +16,18 @@ export interface MonthlyExpenseParams {
   _id: ObjectId;
 }
 
+export interface TotalIncomeParams {
+  _id: ObjectId;
+}
+
+export interface TotalExpensesParams {
+  _id: ObjectId;
+}
+
+export interface NetAmountParams {
+  _id: ObjectId;
+}
+
 @Injectable()
 export class MetricsService {
   constructor(private databaseService: DatabaseService) {}
@@ -143,5 +155,55 @@ export class MetricsService {
       // Odd number of months - middle value
       return expenses[middle];
     }
+  }
+
+  // Calculates the total income for a budget
+  async calculateTotalIncome(budget: TotalIncomeParams): Promise<number> {
+    const result = await this.transactionsCollection.aggregate([
+      { 
+        $match: { 
+          budgetId: budget._id,
+          type: TransactionType.INCOME
+        } 
+      },
+      {
+        $group: {
+          _id: null,
+          totalIncome: { $sum: "$amount" }
+        }
+      }
+    ]).toArray();
+
+    return result[0]?.totalIncome || 0;
+  }
+
+  // Calculates the total expenses for a budget
+  async calculateTotalExpenses(budget: TotalExpensesParams): Promise<number> {
+    const result = await this.transactionsCollection.aggregate([
+      { 
+        $match: { 
+          budgetId: budget._id,
+          type: TransactionType.EXPENSE
+        } 
+      },
+      {
+        $group: {
+          _id: null,
+          totalExpenses: { $sum: "$amount" }
+        }
+      }
+    ]).toArray();
+
+    return result[0]?.totalExpenses || 0;
+  }
+
+  // Calculates the net amount for a budget (total income - total expenses)
+  async calculateNetAmount(budget: NetAmountParams): Promise<number> {
+    const [totalIncome, totalExpenses] = await Promise.all([
+      this.calculateTotalIncome({ _id: budget._id }),
+      this.calculateTotalExpenses({ _id: budget._id })
+    ]);
+
+    return totalIncome - totalExpenses;
   }
 }

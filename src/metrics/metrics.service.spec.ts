@@ -1,4 +1,4 @@
-import { MetricsService, TotalBalanceParams, MonthlyIncomeParams, MonthlyExpenseParams } from './metrics.service';
+import { MetricsService, TotalBalanceParams, MonthlyIncomeParams, MonthlyExpenseParams, TotalIncomeParams, TotalExpensesParams, NetAmountParams } from './metrics.service';
 import { ObjectId } from 'mongodb';
 import { TransactionType } from '../common/enums';
 
@@ -297,6 +297,73 @@ describe('MetricsService', () => {
           $sort: { monthlyExpense: 1 }
         }
       ]);
+    });
+  });
+
+  describe('calculateTotalIncome', () => {
+    it('should return 0 when no income transactions exist', async () => {
+      mockDbService.getDb().collection().aggregate().toArray.mockResolvedValue([]);
+      
+      const budget: TotalIncomeParams = { _id: new ObjectId() };
+      const result = await metricsService.calculateTotalIncome(budget);
+      
+      expect(result).toBe(0);
+    });
+
+    it('should calculate total income correctly', async () => {
+      mockDbService.getDb().collection().aggregate().toArray.mockResolvedValue([
+        { totalIncome: 1500 }
+      ]);
+      
+      const budget: TotalIncomeParams = { _id: new ObjectId() };
+      const result = await metricsService.calculateTotalIncome(budget);
+      
+      expect(result).toBe(1500);
+    });
+  });
+
+  describe('calculateTotalExpenses', () => {
+    it('should return 0 when no expense transactions exist', async () => {
+      mockDbService.getDb().collection().aggregate().toArray.mockResolvedValue([]);
+      
+      const budget: TotalExpensesParams = { _id: new ObjectId() };
+      const result = await metricsService.calculateTotalExpenses(budget);
+      
+      expect(result).toBe(0);
+    });
+
+    it('should calculate total expenses correctly', async () => {
+      mockDbService.getDb().collection().aggregate().toArray.mockResolvedValue([
+        { totalExpenses: 800 }
+      ]);
+      
+      const budget: TotalExpensesParams = { _id: new ObjectId() };
+      const result = await metricsService.calculateTotalExpenses(budget);
+      
+      expect(result).toBe(800);
+    });
+  });
+
+  describe('calculateNetAmount', () => {
+    it('should calculate net amount correctly', async () => {
+      // Mock the individual methods instead of direct aggregation calls
+      jest.spyOn(metricsService, 'calculateTotalIncome').mockResolvedValue(1500);
+      jest.spyOn(metricsService, 'calculateTotalExpenses').mockResolvedValue(800);
+      
+      const budget: NetAmountParams = { _id: new ObjectId() };
+      const result = await metricsService.calculateNetAmount(budget);
+      
+      expect(result).toBe(700); // 1500 - 800
+    });
+
+    it('should handle negative net amount', async () => {
+      jest.spyOn(metricsService, 'calculateTotalIncome').mockResolvedValue(500);
+      jest.spyOn(metricsService, 'calculateTotalExpenses').mockResolvedValue(800);
+      
+      const budget: NetAmountParams = { _id: new ObjectId() };
+      const result = await metricsService.calculateNetAmount(budget);
+      
+      expect(result).toBe(-300); // 500 - 800
     });
   });
 });
