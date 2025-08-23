@@ -4,7 +4,7 @@ import { DatabaseService } from '../database/database.service';
 import { Budget } from './interfaces/budget.interface';
 import { CreateBudgetDto, UpdateBudgetDto } from './dto/budget.dto';
 import { ObjectId } from 'mongodb';
-import { MetricsService, TotalBalanceParams } from '../metrics/metrics.service';
+import { MetricsService, TotalBalanceParams, MonthlyIncomeParams, MonthlyExpenseParams } from '../metrics/metrics.service';
 
 @Injectable()
 export class BudgetsService {
@@ -107,29 +107,49 @@ export class BudgetsService {
     return summary;
   }
 
-  async getMetrics(id: string, userId: string, metric?: string | string[]): Promise<any> {
-    const budget = await this.findOne(id, userId);
+  async getMetrics(id: string, metric?: string | string[]): Promise<any> {
+    const budget = await this.collection.findOne({ _id: new ObjectId(id) });
     
-    // Create properly typed parameters for MetricsService
-    const balanceParams: TotalBalanceParams = {
-      _id: budget._id!,
-      startBalance: budget.startBalance
-    };
-    
-    // Always calculate totalBalance using MetricsService
-    const totalBalance = await this.metricsService.calculateTotalBalance(balanceParams);
-    
-    const allMetrics = { totalBalance };
-    if (!metric) {
-      return allMetrics;
+    if (!budget) {
+      throw new NotFoundException('Budget not found');
     }
-    const requested = Array.isArray(metric) ? metric : [metric];
+    
+    // Determine which metrics to calculate
+    const requestedMetrics = metric ? (Array.isArray(metric) ? metric : [metric]) : ['totalBalance', 'monthlyIncomeMedian', 'monthlyExpenseMedian'];
+    
     const result: Record<string, any> = {};
-    for (const m of requested) {
-      if (m in allMetrics) {
-        result[m] = allMetrics[m];
+    
+    // Only calculate requested metrics
+    for (const metricName of requestedMetrics) {
+      switch (metricName) {
+        case 'totalBalance':
+          const balanceParams: TotalBalanceParams = {
+            _id: budget._id!,
+            startBalance: budget.startBalance
+          };
+          result.totalBalance = await this.metricsService.calculateTotalBalance(balanceParams);
+          break;
+          
+        case 'monthlyIncomeMedian':
+          const incomeParams: MonthlyIncomeParams = {
+            _id: budget._id!
+          };
+          result.monthlyIncomeMedian = await this.metricsService.calculateMonthlyIncomeMedian(incomeParams);
+          break;
+          
+        case 'monthlyExpenseMedian':
+          const expenseParams: MonthlyExpenseParams = {
+            _id: budget._id!
+          };
+          result.monthlyExpenseMedian = await this.metricsService.calculateMonthlyExpenseMedian(expenseParams);
+          break;
+          
+        // Ignore unknown metric names
+        default:
+          break;
       }
     }
+    
     return result;
   }
 }

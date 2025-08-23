@@ -71,7 +71,7 @@ export class BudgetsController {
   @ApiParam({ name: 'id', description: 'Budget ID' })
   @ApiQuery({ name: 'metric', required: false, description: 'Metric(s) to fetch (e.g. totalBalance). Can be repeated for multiple metrics.', isArray: true })
   getMetrics(@Param('id') id: string, @Request() req, @Query('metric') metric?: string | string[]) {
-    return this.budgetsService.getMetrics(id, req.user.userId, metric);
+    return this.budgetsService.getMetrics(id, metric);
   }
 
   @Patch(':id')
