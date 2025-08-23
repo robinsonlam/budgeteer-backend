@@ -1,12 +1,19 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { normalizePositiveNumber } from './utils';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { Budget } from './interfaces/budget.interface';
 import { CreateBudgetDto, UpdateBudgetDto } from './dto/budget.dto';
 import { ObjectId } from 'mongodb';
+import { MetricsService, TotalBalanceParams, MonthlyIncomeParams, MonthlyExpenseParams, TotalIncomeParams, TotalExpensesParams, NetAmountParams } from '../metrics/metrics.service';
+import { ProjectionsService, ProjectedYearEndBalanceParams } from '../projections/projections.service';
 
 @Injectable()
 export class BudgetsService {
-  constructor(private databaseService: DatabaseService) {}
+  constructor(
+    private databaseService: DatabaseService,
+    private metricsService: MetricsService,
+    private projectionsService: ProjectionsService,
+  ) {}
 
   private get collection() {
     return this.databaseService.getDb().collection<Budget>('budgets');
@@ -19,6 +26,7 @@ export class BudgetsService {
       description: createBudgetDto.description,
       startDate: new Date(createBudgetDto.startDate),
       isActive: createBudgetDto.isActive ?? true,
+      startBalance: normalizePositiveNumber(createBudgetDto.startBalance),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -49,6 +57,10 @@ export class BudgetsService {
       ...updateBudgetDto,
       updatedAt: new Date(),
     };
+    // Only update startBalance if provided (not undefined)
+    if (updateBudgetDto.startBalance !== undefined) {
+      updateData.startBalance = normalizePositiveNumber(updateBudgetDto.startBalance);
+    }
 
     // Convert date strings to Date objects if provided
     if (updateBudgetDto.startDate) {
@@ -84,7 +96,6 @@ export class BudgetsService {
 
   async getBudgetSummary(userId: string): Promise<any> {
     const budgets = await this.findActiveByUserId(userId);
-    
     const summary = {
       totalBudgets: budgets.length,
       budgets: budgets.map(budget => ({
@@ -95,7 +106,81 @@ export class BudgetsService {
         isActive: budget.isActive
       }))
     };
-
     return summary;
+  }
+
+  async getMetrics(id: string, metric?: string | string[]): Promise<any> {
+    const budget = await this.collection.findOne({ _id: new ObjectId(id) });
+    
+    if (!budget) {
+      throw new NotFoundException('Budget not found');
+    }
+    
+    // Determine which metrics to calculate
+    const requestedMetrics = metric ? (Array.isArray(metric) ? metric : [metric]) : ['totalBalance', 'monthlyIncomeMedian', 'monthlyExpenseMedian', 'projectedYearEndBalance', 'totalIncome', 'totalExpenses', 'netAmount'];
+    
+    const result: Record<string, any> = {};
+    
+    // Only calculate requested metrics
+    for (const metricName of requestedMetrics) {
+      switch (metricName) {
+        case 'totalBalance':
+          const balanceParams: TotalBalanceParams = {
+            _id: budget._id!,
+            startBalance: budget.startBalance
+          };
+          result.totalBalance = await this.metricsService.calculateTotalBalance(balanceParams);
+          break;
+          
+        case 'monthlyIncomeMedian':
+          const incomeParams: MonthlyIncomeParams = {
+            _id: budget._id!
+          };
+          result.monthlyIncomeMedian = await this.metricsService.calculateMonthlyIncomeMedian(incomeParams);
+          break;
+          
+        case 'monthlyExpenseMedian':
+          const expenseParams: MonthlyExpenseParams = {
+            _id: budget._id!
+          };
+          result.monthlyExpenseMedian = await this.metricsService.calculateMonthlyExpenseMedian(expenseParams);
+          break;
+          
+        case 'projectedYearEndBalance':
+          const projectedBalanceParams: ProjectedYearEndBalanceParams = {
+            _id: budget._id!,
+            startBalance: budget.startBalance
+          };
+          result.projectedYearEndBalance = await this.projectionsService.calculateProjectedYearEndBalance(projectedBalanceParams);
+          break;
+          
+        case 'totalIncome':
+          const totalIncomeParams: TotalIncomeParams = {
+            _id: budget._id!
+          };
+          result.totalIncome = await this.metricsService.calculateTotalIncome(totalIncomeParams);
+          break;
+          
+        case 'totalExpenses':
+          const totalExpensesParams: TotalExpensesParams = {
+            _id: budget._id!
+          };
+          result.totalExpenses = await this.metricsService.calculateTotalExpenses(totalExpensesParams);
+          break;
+          
+        case 'netAmount':
+          const netAmountParams: NetAmountParams = {
+            _id: budget._id!
+          };
+          result.netAmount = await this.metricsService.calculateNetAmount(netAmountParams);
+          break;
+          
+        // Ignore unknown metric names
+        default:
+          break;
+      }
+    }
+    
+    return result;
   }
 }

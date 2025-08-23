@@ -7,7 +7,7 @@ export interface Budget {
   description?: string;
   startDate: Date;
   isActive: boolean;
+  startBalance?: number; // default to 0 if not provided
   createdAt: Date;
   updatedAt: Date;
-  startingBalance?: number; // default to 0
 }
