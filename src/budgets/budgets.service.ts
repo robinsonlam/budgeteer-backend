@@ -5,12 +5,14 @@ import { Budget } from './interfaces/budget.interface';
 import { CreateBudgetDto, UpdateBudgetDto } from './dto/budget.dto';
 import { ObjectId } from 'mongodb';
 import { MetricsService, TotalBalanceParams, MonthlyIncomeParams, MonthlyExpenseParams } from '../metrics/metrics.service';
+import { ProjectionsService, ProjectedYearEndBalanceParams } from '../projections/projections.service';
 
 @Injectable()
 export class BudgetsService {
   constructor(
     private databaseService: DatabaseService,
     private metricsService: MetricsService,
+    private projectionsService: ProjectionsService,
   ) {}
 
   private get collection() {
@@ -115,7 +117,7 @@ export class BudgetsService {
     }
     
     // Determine which metrics to calculate
-    const requestedMetrics = metric ? (Array.isArray(metric) ? metric : [metric]) : ['totalBalance', 'monthlyIncomeMedian', 'monthlyExpenseMedian'];
+    const requestedMetrics = metric ? (Array.isArray(metric) ? metric : [metric]) : ['totalBalance', 'monthlyIncomeMedian', 'monthlyExpenseMedian', 'projectedYearEndBalance'];
     
     const result: Record<string, any> = {};
     
@@ -142,6 +144,14 @@ export class BudgetsService {
             _id: budget._id!
           };
           result.monthlyExpenseMedian = await this.metricsService.calculateMonthlyExpenseMedian(expenseParams);
+          break;
+          
+        case 'projectedYearEndBalance':
+          const projectedBalanceParams: ProjectedYearEndBalanceParams = {
+            _id: budget._id!,
+            startBalance: budget.startBalance
+          };
+          result.projectedYearEndBalance = await this.projectionsService.calculateProjectedYearEndBalance(projectedBalanceParams);
           break;
           
         // Ignore unknown metric names

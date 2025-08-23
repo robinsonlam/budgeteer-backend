@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BudgetsController } from '../src/budgets/budgets.controller';
 import { BudgetsService } from '../src/budgets/budgets.service';
 import { MetricsService } from '../src/metrics/metrics.service';
+import { ProjectionsService } from '../src/projections/projections.service';
 import { DatabaseService } from '../src/database/database.service';
 import { MongoClient, ObjectId } from 'mongodb';
 import { Budget } from '../src/budgets/interfaces/budget.interface';
@@ -26,6 +27,7 @@ describe('BudgetsController Metrics Integration', () => {
       providers: [
         BudgetsService,
         MetricsService,
+        ProjectionsService,
         { provide: DatabaseService, useValue: mockDatabaseService },
       ],
     }).compile();
@@ -117,17 +119,27 @@ describe('BudgetsController Metrics Integration', () => {
     expect(allMetrics).toHaveProperty('totalBalance');
     expect(allMetrics).toHaveProperty('monthlyIncomeMedian'); 
     expect(allMetrics).toHaveProperty('monthlyExpenseMedian');
+    expect(allMetrics).toHaveProperty('projectedYearEndBalance');
 
     // Test with single metric as string
     const singleMetric = await controller.getMetrics(budgetId.toString(), req, 'totalBalance');
     expect(singleMetric).toHaveProperty('totalBalance');
     expect(singleMetric).not.toHaveProperty('monthlyIncomeMedian');
     expect(singleMetric).not.toHaveProperty('monthlyExpenseMedian');
+    expect(singleMetric).not.toHaveProperty('projectedYearEndBalance');
 
     // Test with multiple metrics as array
     const multipleMetrics = await controller.getMetrics(budgetId.toString(), req, ['totalBalance', 'monthlyIncomeMedian']);
     expect(multipleMetrics).toHaveProperty('totalBalance');
     expect(multipleMetrics).toHaveProperty('monthlyIncomeMedian');
     expect(multipleMetrics).not.toHaveProperty('monthlyExpenseMedian');
+    expect(multipleMetrics).not.toHaveProperty('projectedYearEndBalance');
+
+    // Test with projected year-end balance specifically
+    const projectedMetric = await controller.getMetrics(budgetId.toString(), req, 'projectedYearEndBalance');
+    expect(projectedMetric).toHaveProperty('projectedYearEndBalance');
+    expect(projectedMetric).not.toHaveProperty('totalBalance');
+    expect(projectedMetric).not.toHaveProperty('monthlyIncomeMedian');
+    expect(projectedMetric).not.toHaveProperty('monthlyExpenseMedian');
   });
 });

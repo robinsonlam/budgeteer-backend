@@ -69,7 +69,7 @@ export class BudgetsController {
   @ApiResponse({ status: 404, description: 'Budget not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiParam({ name: 'id', description: 'Budget ID' })
-  @ApiQuery({ name: 'metric', required: false, description: 'Metric(s) to fetch (e.g. totalBalance). Can be repeated for multiple metrics.', isArray: true })
+  @ApiQuery({ name: 'metric', required: false, description: 'Metric(s) to fetch (e.g. totalBalance, monthlyIncomeMedian, monthlyExpenseMedian, projectedYearEndBalance). Can be repeated for multiple metrics.', isArray: true })
   getMetrics(@Param('id') id: string, @Request() req, @Query('metric') metric?: string | string[]) {
     return this.budgetsService.getMetrics(id, metric);
   }

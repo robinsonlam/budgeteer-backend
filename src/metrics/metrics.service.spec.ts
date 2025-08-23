@@ -1,6 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { MetricsService, TotalBalanceParams, MonthlyIncomeParams, MonthlyExpenseParams } from './metrics.service';
-import { DatabaseService } from '../database/database.service';
 import { ObjectId } from 'mongodb';
 import { TransactionType } from '../common/enums';
 
