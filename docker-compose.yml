@@ -1,0 +1,17 @@
+services:
+  # NestJS Backend (Universal - works for both dev and prod)
+  backend:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - MONGODB_URI=${MONGODB_URI}
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-key}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+    volumes:
+      # Mount source code for development hot reloading
+      - .:/app
+      - /app/node_modules  # Anonymous volume to prevent node_modules override
+    command: pnpm run start:dev
+    restart: unless-stopped
