@@ -1,0 +1,26 @@
+# AWS Region
+aws_region = "ap-southeast-2"
+
+# Project Configuration
+project_name = "budgeteer"
+
+# Network Configuration
+vpc_cidr = "172.17.0.0/16"
+az_count = 2
+
+# Application Configuration
+app_image = "225989367801.dkr.ecr.ap-southeast-2.amazonaws.com/budgeteer-repo:latest"
+app_port = 3000
+app_count = 2
+
+# Fargate Configuration
+fargate_cpu = "1024"
+fargate_memory = "2048"
+
+# Secrets (copy this file to terraform.tfvars and fill in real values)
+mongodb_uri = "mongodb+srv://username:password@cluster.mongodb.net/budgeteer?retryWrites=true&w=majority"
+jwt_secret = "your-super-secret-jwt-key-here"
+jwt_expires_in = "86400"
+
+# CORS Configuration
+cors_origins = "http://localhost:5173,https://master.d3b2w5it401pk9.amplifyapp.com"
