@@ -47,12 +47,12 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Google OAuth callback' })
   @ApiResponse({ status: 302, description: 'Redirects to frontend with token' })
-  @Redirect('http://localhost:3000/auth/success', 302)
   async googleAuthRedirect(@Request() req) {
     const result = await this.authService.login(req.user);
     
     // Redirect to frontend with token
-    const redirectUrl = `http://localhost:3000/auth/success?token=${result.access_token}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const redirectUrl = `${frontendUrl}/auth/success?token=${result.access_token}`;
     return { url: redirectUrl };
   }
 

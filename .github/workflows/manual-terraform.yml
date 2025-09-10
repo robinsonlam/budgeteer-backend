@@ -1,0 +1,83 @@
+name: Manual Terraform Operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform action to perform'
+        required: true
+        type: choice
+        options:
+        - plan
+        - apply
+        - destroy
+      environment:
+        description: 'Environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+
+env:
+  AWS_REGION: ap-southeast-2
+  TF_VAR_mongodb_uri: ${{ secrets.MONGODB_URI }}
+  TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+  TF_VAR_jwt_expires_in: ${{ secrets.JWT_EXPIRES_IN }}
+
+jobs:
+  terraform:
+    name: Terraform ${{ inputs.action }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.5.0
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Validate
+      if: inputs.action != 'destroy'
+      run: terraform validate
+
+    - name: Terraform Plan
+      if: inputs.action == 'plan'
+      run: terraform plan -no-color
+
+    - name: Terraform Apply
+      if: inputs.action == 'apply'
+      run: |
+        terraform plan -out=tfplan
+        terraform apply -auto-approve tfplan
+
+    - name: Terraform Destroy
+      if: inputs.action == 'destroy'
+      run: terraform destroy -auto-approve
+
+    - name: Get Terraform Outputs
+      if: inputs.action == 'apply'
+      run: |
+        echo "### Terraform Outputs" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **API Base URL:** $(terraform output -raw api_base_url)" >> $GITHUB_STEP_SUMMARY
+        echo "- **ECS Cluster:** $(terraform output -raw ecs_cluster_name)" >> $GITHUB_STEP_SUMMARY
+        echo "- **ECS Service:** $(terraform output -raw ecs_service_name)" >> $GITHUB_STEP_SUMMARY
+        echo "- **CloudFront URL:** $(terraform output -raw cloudfront_url)" >> $GITHUB_STEP_SUMMARY
