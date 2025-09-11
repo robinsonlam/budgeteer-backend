@@ -8,9 +8,9 @@ on:
 
 env:
   AWS_REGION: ap-southeast-2
-  mongodb_uri: ${{ secrets.MONGODB_URI }}
-  jwt_secret: ${{ secrets.JWT_SECRET }}
-  jwt_expires_in: ${{ secrets.JWT_EXPIRES_IN }}
+  TF_VAR_mongodb_uri: ${{ secrets.MONGODB_URI }}
+  TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+  TF_VAR_jwt_expires_in: ${{ secrets.JWT_EXPIRES_IN }}
 
 jobs:
   plan-and-apply:
@@ -30,6 +30,11 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
+
+    - name: Verify AWS credentials
+      run: |
+        echo "AWS Region: $AWS_REGION"
+        aws sts get-caller-identity
 
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
