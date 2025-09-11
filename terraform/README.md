@@ -1,4 +1,4 @@
-# Terraform ECS Deployment for Budgeteer Backend
+# Terraform ECS Deployment for Budgeteer Backend /
 
 This Terraform configuration deploys the Budgeteer NestJS backend to AWS ECS Fargate.
 

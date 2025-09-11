@@ -19,14 +19,18 @@ on:
 
 env:
   AWS_REGION: ap-southeast-2
-  mongodb_uri: ${{ secrets.MONGODB_URI }}
-  jwt_secret: ${{ secrets.JWT_SECRET }}
-  jwt_expires_in: ${{ secrets.JWT_EXPIRES_IN }}
+  TF_VAR_mongodb_uri: ${{ secrets.MONGODB_URI }}
+  TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+  TF_VAR_jwt_expires_in: ${{ secrets.JWT_EXPIRES_IN }}
 
 jobs:
   terraform:
     name: Terraform ${{ inputs.action }} (${{ inputs.branch }})
     runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: terraform
@@ -44,6 +48,11 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
+    - name: Verify AWS credentials
+      run: |
+        echo "AWS Region: $AWS_REGION"
+        aws sts get-caller-identity
+
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
@@ -51,6 +60,9 @@ jobs:
 
     - name: Terraform Init
       run: terraform init
+
+    - name: Terraform Format
+      run: terraform fmt
 
     - name: Terraform Validate
       if: inputs.action != 'destroy'

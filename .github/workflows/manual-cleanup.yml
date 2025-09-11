@@ -1,0 +1,264 @@
+name: Manual Cleanup - Reset Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type "DELETE-ALL-RESOURCES" to confirm destruction'
+        required: true
+        type: string
+      target_resources:
+        description: 'What to clean up'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - iam-only
+        - ecs-only
+        - networking-only
+
+env:
+  AWS_REGION: ap-southeast-2
+  PROJECT_NAME: budgeteer
+
+jobs:
+  cleanup:
+    name: Cleanup Resources (${{ inputs.target_resources }})
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Validate confirmation
+      run: |
+        if [ "${{ inputs.confirmation }}" != "DELETE-ALL-RESOURCES" ]; then
+          echo "❌ Invalid confirmation. You must type exactly: DELETE-ALL-RESOURCES"
+          exit 1
+        fi
+        echo "✅ Confirmation validated"
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Verify AWS credentials
+      run: |
+        echo "AWS Region: $AWS_REGION"
+        aws sts get-caller-identity
+
+    - name: List existing resources before cleanup
+      run: |
+        echo "🔍 Current AWS Resources (before cleanup):"
+        echo ""
+        echo "=== IAM Roles ==="
+        aws iam list-roles --query 'Roles[?contains(RoleName, `budgeteer`)].{Name:RoleName,Created:CreateDate}' --output table || true
+        echo ""
+        echo "=== IAM Policies ==="
+        aws iam list-policies --scope Local --query 'Policies[?contains(PolicyName, `budgeteer`)].{Name:PolicyName,Created:CreateDate}' --output table || true
+        echo ""
+        echo "=== ECS Clusters ==="
+        aws ecs list-clusters --query 'clusterArns[?contains(@, `budgeteer`)]' --output table || true
+        echo ""
+        echo "=== ECS Services ==="
+        aws ecs list-services --cluster budgeteer --query 'serviceArns' --output table 2>/dev/null || echo "No ECS cluster found"
+        echo ""
+        echo "=== ECR Repositories ==="
+        aws ecr describe-repositories --query 'repositories[?contains(repositoryName, `budgeteer`)].{Name:repositoryName,Created:createdAt}' --output table || true
+        echo ""
+        echo "=== Application Load Balancers ==="
+        aws elbv2 describe-load-balancers --query 'LoadBalancers[?contains(LoadBalancerName, `budgeteer`)].{Name:LoadBalancerName,DNS:DNSName}' --output table || true
+        echo ""
+        echo "=== Security Groups ==="
+        aws ec2 describe-security-groups --filters "Name=group-name,Values=*budgeteer*" --query 'SecurityGroups[].{Name:GroupName,ID:GroupId,Description:Description}' --output table || true
+
+    - name: Cleanup ECS Resources
+      if: inputs.target_resources == 'all' || inputs.target_resources == 'ecs-only'
+      run: |
+        echo "🧹 Cleaning up ECS resources..."
+        
+        # Stop and delete ECS services
+        CLUSTER_NAME="budgeteer"
+        if aws ecs describe-clusters --clusters $CLUSTER_NAME --query 'clusters[0].status' --output text 2>/dev/null | grep -q "ACTIVE"; then
+          echo "Found ECS cluster: $CLUSTER_NAME"
+          
+          # Get all services in the cluster
+          SERVICES=$(aws ecs list-services --cluster $CLUSTER_NAME --query 'serviceArns[*]' --output text)
+          
+          if [ ! -z "$SERVICES" ]; then
+            echo "Stopping ECS services..."
+            for service in $SERVICES; do
+              service_name=$(basename $service)
+              echo "  Updating service $service_name to 0 desired count..."
+              aws ecs update-service --cluster $CLUSTER_NAME --service $service_name --desired-count 0
+              
+              echo "  Waiting for service $service_name to stop..."
+              aws ecs wait services-stable --cluster $CLUSTER_NAME --services $service_name
+              
+              echo "  Deleting service $service_name..."
+              aws ecs delete-service --cluster $CLUSTER_NAME --service $service_name
+            done
+          fi
+          
+          echo "Deleting ECS cluster: $CLUSTER_NAME"
+          aws ecs delete-cluster --cluster $CLUSTER_NAME
+        else
+          echo "No ECS cluster found"
+        fi
+
+    - name: Cleanup Load Balancer and Target Groups
+      if: inputs.target_resources == 'all' || inputs.target_resources == 'networking-only'
+      run: |
+        echo "🧹 Cleaning up Load Balancer resources..."
+        
+        # Delete load balancers
+        LB_ARNS=$(aws elbv2 describe-load-balancers --query 'LoadBalancers[?contains(LoadBalancerName, `budgeteer`)].LoadBalancerArn' --output text)
+        if [ ! -z "$LB_ARNS" ]; then
+          for lb_arn in $LB_ARNS; do
+            echo "Deleting load balancer: $lb_arn"
+            aws elbv2 delete-load-balancer --load-balancer-arn $lb_arn
+          done
+          
+          echo "Waiting for load balancers to be deleted..."
+          sleep 30
+        fi
+        
+        # Delete target groups
+        TG_ARNS=$(aws elbv2 describe-target-groups --query 'TargetGroups[?contains(TargetGroupName, `budgeteer`)].TargetGroupArn' --output text)
+        if [ ! -z "$TG_ARNS" ]; then
+          for tg_arn in $TG_ARNS; do
+            echo "Deleting target group: $tg_arn"
+            aws elbv2 delete-target-group --target-group-arn $tg_arn || true
+          done
+        fi
+
+    - name: Cleanup Security Groups
+      if: inputs.target_resources == 'all' || inputs.target_resources == 'networking-only'
+      run: |
+        echo "🧹 Cleaning up Security Groups..."
+        
+        # Get security groups (excluding default)
+        SG_IDS=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=*budgeteer*" --query 'SecurityGroups[?GroupName!=`default`].GroupId' --output text)
+        
+        if [ ! -z "$SG_IDS" ]; then
+          for sg_id in $SG_IDS; do
+            echo "Deleting security group: $sg_id"
+            aws ec2 delete-security-group --group-id $sg_id || echo "Failed to delete $sg_id (may have dependencies)"
+          done
+        fi
+
+    - name: Cleanup IAM Resources
+      if: inputs.target_resources == 'all' || inputs.target_resources == 'iam-only'
+      run: |
+        echo "🧹 Cleaning up IAM resources..."
+        
+        # Function to detach and delete policies, then delete role
+        cleanup_iam_role() {
+          local role_name=$1
+          
+          if aws iam get-role --role-name "$role_name" >/dev/null 2>&1; then
+            echo "Processing IAM role: $role_name"
+            
+            # Detach all managed policies
+            echo "  Detaching managed policies..."
+            aws iam list-attached-role-policies --role-name "$role_name" --query 'AttachedPolicies[].PolicyArn' --output text | while read policy_arn; do
+              if [ ! -z "$policy_arn" ]; then
+                echo "    Detaching policy: $policy_arn"
+                aws iam detach-role-policy --role-name "$role_name" --policy-arn "$policy_arn"
+              fi
+            done
+            
+            # Delete inline policies
+            echo "  Deleting inline policies..."
+            aws iam list-role-policies --role-name "$role_name" --query 'PolicyNames[]' --output text | while read policy_name; do
+              if [ ! -z "$policy_name" ]; then
+                echo "    Deleting inline policy: $policy_name"
+                aws iam delete-role-policy --role-name "$role_name" --policy-name "$policy_name"
+              fi
+            done
+            
+            # Delete the role
+            echo "  Deleting role: $role_name"
+            aws iam delete-role --role-name "$role_name"
+          else
+            echo "IAM role $role_name does not exist"
+          fi
+        }
+        
+        # Delete all budgeteer-related IAM roles
+        cleanup_iam_role "budgeteer-task-execution-role"
+        cleanup_iam_role "budgeteer-task-role"
+        cleanup_iam_role "budgeteer-ecs-autoscale-role"
+        cleanup_iam_role "budgeteer-ecs-cloudwatch-role"
+        cleanup_iam_role "budgeteer-deployment-role"
+        
+        # Delete custom policies
+        echo "Deleting custom IAM policies..."
+        POLICY_ARNS=$(aws iam list-policies --scope Local --query 'Policies[?contains(PolicyName, `budgeteer`)].Arn' --output text)
+        for policy_arn in $POLICY_ARNS; do
+          if [ ! -z "$policy_arn" ]; then
+            echo "  Deleting policy: $policy_arn"
+            # Delete all policy versions except default
+            aws iam list-policy-versions --policy-arn "$policy_arn" --query 'Versions[?!IsDefaultVersion].VersionId' --output text | while read version_id; do
+              if [ ! -z "$version_id" ]; then
+                aws iam delete-policy-version --policy-arn "$policy_arn" --version-id "$version_id"
+              fi
+            done
+            # Delete the policy
+            aws iam delete-policy --policy-arn "$policy_arn"
+          fi
+        done
+
+    - name: Cleanup ECR Repository
+      if: inputs.target_resources == 'all'
+      run: |
+        echo "🧹 Cleaning up ECR repository..."
+        
+        REPO_NAME="budgeteer-repo"
+        if aws ecr describe-repositories --repository-names "$REPO_NAME" >/dev/null 2>&1; then
+          echo "Deleting ECR repository: $REPO_NAME (this will delete all images)"
+          aws ecr delete-repository --repository-name "$REPO_NAME" --force
+        else
+          echo "ECR repository $REPO_NAME does not exist"
+        fi
+
+    - name: Wait and verify cleanup
+      run: |
+        echo "⏳ Waiting 30 seconds for deletions to propagate..."
+        sleep 30
+        
+        echo "🔍 Verifying cleanup (remaining resources):"
+        echo ""
+        echo "=== Remaining IAM Roles ==="
+        aws iam list-roles --query 'Roles[?contains(RoleName, `budgeteer`)].RoleName' --output table || true
+        echo ""
+        echo "=== Remaining ECS Clusters ==="
+        aws ecs list-clusters --query 'clusterArns[?contains(@, `budgeteer`)]' --output table || true
+        echo ""
+        echo "=== Remaining ECR Repositories ==="
+        aws ecr describe-repositories --query 'repositories[?contains(repositoryName, `budgeteer`)].repositoryName' --output table || true
+        echo ""
+        echo "=== Remaining Load Balancers ==="
+        aws elbv2 describe-load-balancers --query 'LoadBalancers[?contains(LoadBalancerName, `budgeteer`)].LoadBalancerName' --output table || true
+
+    - name: Cleanup complete
+      run: |
+        echo "✅ Cleanup completed!"
+        echo ""
+        echo "🎯 What was cleaned up: ${{ inputs.target_resources }}"
+        echo ""
+        echo "📋 Next steps:"
+        echo "1. Run terraform init to reset state"
+        echo "2. Run terraform plan to see what will be created fresh"
+        echo "3. Run terraform apply to create clean infrastructure"
+        echo ""
+        echo "⚠️  Note: If you have any remaining resources showing above,"
+        echo "   they may have dependencies or require manual deletion."

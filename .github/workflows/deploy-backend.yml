@@ -1,4 +1,4 @@
-name: Auto Deploy Docker
+name: (PROD) Auto Deploy Docker
 
 on:
   push:
@@ -18,6 +18,10 @@ jobs:
   deploy-docker:
     name: Deploy Docker
     runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
     - name: Checkout
