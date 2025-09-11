@@ -1,24 +1,21 @@
-name: Manual Terraform Operations
+name: Manual Terraform
 
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: 'Branch to deploy from'
+        required: true
+        default: 'master'
+        type: string
       action:
-        description: 'Terraform action to perform'
+        description: 'Terraform action'
         required: true
         type: choice
         options:
         - plan
         - apply
         - destroy
-      environment:
-        description: 'Environment'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-        - production
-        - staging
 
 env:
   AWS_REGION: ap-southeast-2
@@ -28,9 +25,8 @@ env:
 
 jobs:
   terraform:
-    name: Terraform ${{ inputs.action }}
+    name: Terraform ${{ inputs.action }} (${{ inputs.branch }})
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
     defaults:
       run:
         working-directory: terraform
@@ -38,6 +34,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch }}
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -60,7 +58,7 @@ jobs:
 
     - name: Terraform Plan
       if: inputs.action == 'plan'
-      run: terraform plan -no-color
+      run: terraform plan
 
     - name: Terraform Apply
       if: inputs.action == 'apply'
@@ -71,13 +69,3 @@ jobs:
     - name: Terraform Destroy
       if: inputs.action == 'destroy'
       run: terraform destroy -auto-approve
-
-    - name: Get Terraform Outputs
-      if: inputs.action == 'apply'
-      run: |
-        echo "### Terraform Outputs" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "- **API Base URL:** $(terraform output -raw api_base_url)" >> $GITHUB_STEP_SUMMARY
-        echo "- **ECS Cluster:** $(terraform output -raw ecs_cluster_name)" >> $GITHUB_STEP_SUMMARY
-        echo "- **ECS Service:** $(terraform output -raw ecs_service_name)" >> $GITHUB_STEP_SUMMARY
-        echo "- **CloudFront URL:** $(terraform output -raw cloudfront_url)" >> $GITHUB_STEP_SUMMARY

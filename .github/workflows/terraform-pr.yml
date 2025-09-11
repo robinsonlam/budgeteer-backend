@@ -1,11 +1,10 @@
-name: Terraform Plan on PR
+name: Auto Terraform Plan & Apply
 
 on:
   pull_request:
     branches: [ master ]
     paths:
       - 'terraform/**'
-      - '.github/workflows/terraform-pr.yml'
 
 env:
   AWS_REGION: ap-southeast-2
@@ -14,8 +13,8 @@ env:
   TF_VAR_jwt_expires_in: ${{ secrets.JWT_EXPIRES_IN }}
 
 jobs:
-  terraform-plan:
-    name: Terraform Plan
+  plan-and-apply:
+    name: Terraform Plan & Apply
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -48,71 +47,58 @@ jobs:
 
     - name: Terraform Plan
       id: plan
-      run: |
-        terraform plan -no-color -detailed-exitcode
+      run: terraform plan -no-color -out=tfplan
       continue-on-error: true
 
-    - name: Comment Plan on PR
+    - name: Terraform Apply
+      id: apply
+      run: terraform apply -auto-approve tfplan
+      continue-on-error: true
+
+    - name: Comment PR
       uses: actions/github-script@v7
       env:
         PLAN: ${{ steps.plan.outputs.stdout }}
-        EXIT_CODE: ${{ steps.plan.outputs.exitcode }}
+        APPLY: ${{ steps.apply.outputs.stdout }}
+        PLAN_EXIT_CODE: ${{ steps.plan.outcome }}
+        APPLY_EXIT_CODE: ${{ steps.apply.outcome }}
       with:
         script: |
-          const plan = process.env.PLAN;
-          const exitCode = process.env.EXIT_CODE;
+          const planSuccess = process.env.PLAN_EXIT_CODE === 'success';
+          const applySuccess = process.env.APPLY_EXIT_CODE === 'success';
           
-          let summary = '';
-          if (exitCode === '0') {
-            summary = '✅ **No changes** - Terraform configuration is up to date';
-          } else if (exitCode === '2') {
-            summary = '📋 **Changes detected** - Terraform will make changes';
-          } else {
-            summary = '❌ **Plan failed** - Please check the configuration';
-          }
+          const output = `## Terraform Plan & Apply �
           
-          const output = `### Terraform Plan Results
+          ### Plan: ${planSuccess ? '✅ Success' : '❌ Failed'}
+          ### Apply: ${applySuccess ? '✅ Success' : '❌ Failed'}
           
-          ${summary}
+          ${applySuccess ? '🎉 **Infrastructure changes applied successfully!** This PR is ready to merge.' : '⚠️ **Apply failed - please review and fix before merging.**'}
           
           <details>
-          <summary>Show Plan Details</summary>
+          <summary>Show Plan Output</summary>
           
           \`\`\`terraform
-          ${plan}
+          ${process.env.PLAN}
           \`\`\`
           
           </details>
           
-          *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+          <details>
+          <summary>Show Apply Output</summary>
           
-          // Find existing comment
-          const { data: comments } = await github.rest.issues.listComments({
+          \`\`\`terraform
+          ${process.env.APPLY}
+          \`\`\`
+          
+          </details>`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            issue_number: context.issue.number,
-          });
-          
-          const botComment = comments.find(comment => 
-            comment.user.type === 'Bot' && comment.body.includes('Terraform Plan Results')
-          );
-          
-          if (botComment) {
-            await github.rest.issues.updateComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: botComment.id,
-              body: output
-            });
-          } else {
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: output
-            });
-          }
+            body: output
+          })
 
-    - name: Terraform Plan Status
-      if: steps.plan.outcome == 'failure'
+    - name: Fail job if apply failed
+      if: steps.apply.outcome == 'failure'
       run: exit 1
