@@ -27,6 +27,10 @@ jobs:
   deploy:
     name: Manual Deploy (${{ inputs.branch }} → ${{ inputs.environment }})
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
     - name: Checkout

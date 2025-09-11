@@ -1,4 +1,4 @@
-name: Auto Terraform Plan & Apply
+name: (PROD) Auto Terraform Plan & Apply
 
 on:
   pull_request:
@@ -16,6 +16,7 @@ jobs:
   plan-and-apply:
     name: Terraform Plan & Apply
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       id-token: write
       contents: read
