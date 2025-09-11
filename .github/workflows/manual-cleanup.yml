@@ -169,19 +169,19 @@ jobs:
             
             # Detach all managed policies
             echo "  Detaching managed policies..."
-            aws iam list-attached-role-policies --role-name "$role_name" --query 'AttachedPolicies[].PolicyArn' --output text | while read policy_arn; do
-              if [ ! -z "$policy_arn" ]; then
+            aws iam list-attached-role-policies --role-name "$role_name" --query 'AttachedPolicies[].PolicyArn' --output text | tr '\t' '\n' | while read policy_arn; do
+              if [ ! -z "$policy_arn" ] && [ "$policy_arn" != "None" ]; then
                 echo "    Detaching policy: $policy_arn"
-                aws iam detach-role-policy --role-name "$role_name" --policy-arn "$policy_arn"
+                aws iam detach-role-policy --role-name "$role_name" --policy-arn "$policy_arn" || echo "    Failed to detach $policy_arn"
               fi
             done
             
             # Delete inline policies
             echo "  Deleting inline policies..."
-            aws iam list-role-policies --role-name "$role_name" --query 'PolicyNames[]' --output text | while read policy_name; do
-              if [ ! -z "$policy_name" ]; then
+            aws iam list-role-policies --role-name "$role_name" --query 'PolicyNames[]' --output text | tr '\t' '\n' | while read policy_name; do
+              if [ ! -z "$policy_name" ] && [ "$policy_name" != "None" ]; then
                 echo "    Deleting inline policy: $policy_name"
-                aws iam delete-role-policy --role-name "$role_name" --policy-name "$policy_name"
+                aws iam delete-role-policy --role-name "$role_name" --policy-name "$policy_name" || echo "    Failed to delete $policy_name"
               fi
             done
             
@@ -202,18 +202,18 @@ jobs:
         
         # Delete custom policies
         echo "Deleting custom IAM policies..."
-        POLICY_ARNS=$(aws iam list-policies --scope Local --query 'Policies[?contains(PolicyName, `budgeteer`)].Arn' --output text)
-        for policy_arn in $POLICY_ARNS; do
-          if [ ! -z "$policy_arn" ]; then
+        aws iam list-policies --scope Local --query 'Policies[?contains(PolicyName, `budgeteer`)].Arn' --output text | tr '\t' '\n' | while read policy_arn; do
+          if [ ! -z "$policy_arn" ] && [ "$policy_arn" != "None" ]; then
             echo "  Deleting policy: $policy_arn"
             # Delete all policy versions except default
-            aws iam list-policy-versions --policy-arn "$policy_arn" --query 'Versions[?!IsDefaultVersion].VersionId' --output text | while read version_id; do
-              if [ ! -z "$version_id" ]; then
-                aws iam delete-policy-version --policy-arn "$policy_arn" --version-id "$version_id"
+            aws iam list-policy-versions --policy-arn "$policy_arn" --query 'Versions[?!IsDefaultVersion].VersionId' --output text | tr '\t' '\n' | while read version_id; do
+              if [ ! -z "$version_id" ] && [ "$version_id" != "None" ]; then
+                echo "    Deleting policy version: $version_id"
+                aws iam delete-policy-version --policy-arn "$policy_arn" --version-id "$version_id" || echo "    Failed to delete version $version_id"
               fi
             done
             # Delete the policy
-            aws iam delete-policy --policy-arn "$policy_arn"
+            aws iam delete-policy --policy-arn "$policy_arn" || echo "  Failed to delete policy $policy_arn"
           fi
         done
 
