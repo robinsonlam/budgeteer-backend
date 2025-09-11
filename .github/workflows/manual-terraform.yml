@@ -27,6 +27,9 @@ jobs:
   terraform:
     name: Terraform ${{ inputs.action }} (${{ inputs.branch }})
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     defaults:
       run:
         working-directory: terraform

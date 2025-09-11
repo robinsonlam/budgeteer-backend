@@ -16,6 +16,10 @@ jobs:
   plan-and-apply:
     name: Terraform Plan & Apply
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
     defaults:
       run:
         working-directory: terraform
