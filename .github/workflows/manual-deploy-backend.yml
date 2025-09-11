@@ -1,8 +1,13 @@
-name: Manual Deploy Backend
+name: Manual Docker Deploy
 
 on:
   workflow_dispatch:
     inputs:
+      branch:
+        description: 'Branch to deploy from'
+        required: true
+        default: 'master'
+        type: string
       environment:
         description: 'Environment to deploy to'
         required: true
@@ -20,13 +25,14 @@ env:
 
 jobs:
   deploy:
-    name: Manual Deploy Backend
+    name: Manual Deploy (${{ inputs.branch }} → ${{ inputs.environment }})
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch }}
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -39,29 +45,20 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Build, tag, and push image to Amazon ECR
-      id: build-image
+    - name: Build, tag, and push Docker image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_TAG: ${{ github.sha }}
+        IMAGE_TAG: ${{ inputs.branch }}-${{ github.sha }}
+        BRANCH_TAG: ${{ inputs.branch }}-latest
       run: |
-        echo "Building Docker image..."
         docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH_TAG
         docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        
-        echo "Pushing Docker image..."
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$BRANCH_TAG
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        
-        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-    - name: Force ECS service update
+    - name: Deploy to ECS
       run: |
-        echo "Forcing ECS service deployment..."
         aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment
-
-    - name: Wait for service stability
-      run: |
-        echo "Waiting for ECS service to stabilize..."
         aws ecs wait services-stable --cluster $ECS_CLUSTER --services $ECS_SERVICE
-        echo "Deployment completed successfully!"

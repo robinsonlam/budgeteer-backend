@@ -32,23 +32,44 @@ Thumbs.db
 coverage/
 
 # Terraform
+# State files
 *.tfstate
 *.tfstate.*
+*.tfstate.backup
+.terraform.tfstate.lock.info
+
+# Variable files (contain secrets)
 *.tfvars
 *.tfvars.json
+!*.tfvars.example
+
+# Terraform working directory
 .terraform/
 .terraform.lock.hcl
+
+# Plan files
 terraform.tfplan
 tfplan
-crash.log
-crash.*.log
+*.tfplan
+
+# Override files
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
+# CLI configuration files
 .terraformrc
 terraform.rc
-.terraform.tfstate.lock.info
 
-# Terraform variable files (keep .tfvars.example)
-!*.tfvars.example
+# Crash log files
+crash.log
+crash.*.log
+
+# Ignore any backup files
+*.backup
+*.bak
+
+# Temporary files
+*.tmp
+*.temp
