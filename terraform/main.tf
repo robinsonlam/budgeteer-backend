@@ -172,7 +172,7 @@ resource "aws_ecs_task_definition" "app" {
   container_definitions = jsonencode([{
     name  = var.app_image_name
     image = var.app_image
-    
+
     portMappings = [{
       containerPort = var.app_port
       protocol      = "tcp"
