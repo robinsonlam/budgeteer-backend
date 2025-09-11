@@ -1,4 +1,4 @@
-name: (PROD) Auto Terraform Plan & Apply.
+name: (PROD) Auto Terraform Plan & Apply
 
 on:
   pull_request:
