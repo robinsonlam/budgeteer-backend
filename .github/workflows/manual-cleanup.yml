@@ -79,6 +79,9 @@ jobs:
         echo ""
         echo "=== Security Groups ==="
         aws ec2 describe-security-groups --filters "Name=group-name,Values=*budgeteer*" --query 'SecurityGroups[].{Name:GroupName,ID:GroupId,Description:Description}' --output table || true
+        echo ""
+        echo "=== CloudWatch Log Groups ==="
+        aws logs describe-log-groups --log-group-name-prefix "/ecs/budgeteer" --query 'logGroups[].{Name:logGroupName,Created:creationTime}' --output table || true
 
     - name: Cleanup ECS Resources
       if: inputs.target_resources == 'all' || inputs.target_resources == 'ecs-only'
@@ -230,6 +233,36 @@ jobs:
           echo "ECR repository $REPO_NAME does not exist"
         fi
 
+    - name: Cleanup CloudWatch Log Groups
+      if: inputs.target_resources == 'all'
+      run: |
+        echo "🧹 Cleaning up CloudWatch Log Groups..."
+        
+        # Delete all budgeteer-related log groups
+        LOG_GROUPS=$(aws logs describe-log-groups --log-group-name-prefix "/ecs/budgeteer" --query 'logGroups[].logGroupName' --output text)
+        
+        if [ ! -z "$LOG_GROUPS" ]; then
+          echo "$LOG_GROUPS" | tr '\t' '\n' | while read log_group; do
+            if [ ! -z "$log_group" ] && [ "$log_group" != "None" ]; then
+              echo "  Deleting log group: $log_group"
+              aws logs delete-log-group --log-group-name "$log_group" || echo "  Failed to delete log group $log_group"
+            fi
+          done
+        else
+          echo "No CloudWatch log groups found"
+        fi
+        
+        # Also check for any other budgeteer-related log groups
+        OTHER_LOG_GROUPS=$(aws logs describe-log-groups --query 'logGroups[?contains(logGroupName, `budgeteer`)].logGroupName' --output text)
+        if [ ! -z "$OTHER_LOG_GROUPS" ]; then
+          echo "$OTHER_LOG_GROUPS" | tr '\t' '\n' | while read log_group; do
+            if [ ! -z "$log_group" ] && [ "$log_group" != "None" ]; then
+              echo "  Deleting additional log group: $log_group"
+              aws logs delete-log-group --log-group-name "$log_group" || echo "  Failed to delete log group $log_group"
+            fi
+          done
+        fi
+
     - name: Wait and verify cleanup
       run: |
         echo "⏳ Waiting 30 seconds for deletions to propagate..."
@@ -248,6 +281,9 @@ jobs:
         echo ""
         echo "=== Remaining Load Balancers ==="
         aws elbv2 describe-load-balancers --query 'LoadBalancers[?contains(LoadBalancerName, `budgeteer`)].LoadBalancerName' --output table || true
+        echo ""
+        echo "=== Remaining CloudWatch Log Groups ==="
+        aws logs describe-log-groups --log-group-name-prefix "/ecs/budgeteer" --query 'logGroups[].logGroupName' --output table || true
 
     - name: Cleanup complete
       run: |
