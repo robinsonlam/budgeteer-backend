@@ -61,6 +61,16 @@ jobs:
           echo "✅ Terraform files are properly formatted"
         fi
 
+    - name: Import existing resources (if they exist)
+      run: |
+        # Try to import existing IAM roles - ignore errors if they don't exist
+        terraform import aws_iam_role.task_execution budgeteer-task-execution-role || true
+        terraform import aws_iam_role.task_role budgeteer-task-role || true
+        terraform import aws_iam_role.ecs_autoscale_role budgeteer-ecs-autoscale-role || true
+        terraform import aws_iam_role.ecs_task_cloudwatch budgeteer-ecs-cloudwatch-role || true
+        terraform import aws_iam_role.deployment_role budgeteer-deployment-role || true
+      continue-on-error: true
+
     - name: Terraform Plan
       id: plan
       run: terraform plan -no-color -out=tfplan
