@@ -72,26 +72,11 @@ jobs:
       if: inputs.action == 'plan'
       run: terraform plan
 
-    - name: Terraform Apply (ignore existing resource errors)
+    - name: Terraform Apply
       if: inputs.action == 'apply'
       run: |
-        echo "🚀 Applying Terraform changes (ignoring existing resource conflicts)..."
         terraform plan -out=tfplan
-        terraform apply -auto-approve tfplan || {
-          echo "⚠️ Apply encountered errors - checking if they're just existing resource conflicts..."
-          terraform apply -auto-approve tfplan 2>&1 | tee apply_output.log
-          
-          # Check if errors are only about existing resources
-          if grep -q "EntityAlreadyExists\|AlreadyExists\|already exists" apply_output.log; then
-            echo "✅ Errors appear to be existing resource conflicts - this is expected during state sync"
-            echo "💡 You may want to run 'terraform import' for these resources or remove them manually"
-            exit 0
-          else
-            echo "❌ Apply failed with non-recoverable errors"
-            cat apply_output.log
-            exit 1
-          fi
-        }
+        terraform apply -auto-approve tfplan
 
     - name: Terraform Destroy
       if: inputs.action == 'destroy'
