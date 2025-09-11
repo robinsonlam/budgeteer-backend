@@ -8,9 +8,9 @@ on:
 
 env:
   AWS_REGION: ap-southeast-2
-  TF_VAR_mongodb_uri: ${{ secrets.MONGODB_URI }}
-  TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
-  TF_VAR_jwt_expires_in: ${{ secrets.JWT_EXPIRES_IN }}
+  mongodb_uri: ${{ secrets.MONGODB_URI }}
+  jwt_secret: ${{ secrets.JWT_SECRET }}
+  jwt_expires_in: ${{ secrets.JWT_EXPIRES_IN }}
 
 jobs:
   plan-and-apply:
