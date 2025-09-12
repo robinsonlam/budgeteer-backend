@@ -224,6 +224,7 @@ jobs:
       if: inputs.target_resources == 'all'
       run: |
         echo "🧹 Cleaning up ECR repository..."
+        echo "⚠️  Note: ECR repository is now managed by Terraform and will be recreated on next terraform apply"
         
         REPO_NAME="budgeteer-repo"
         if aws ecr describe-repositories --repository-names "$REPO_NAME" >/dev/null 2>&1; then
