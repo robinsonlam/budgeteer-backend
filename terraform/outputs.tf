@@ -87,3 +87,18 @@ output "api_base_url" {
   description = "Base URL for API calls (use this in your frontend)"
   value       = var.enable_cloudfront ? "https://${aws_cloudfront_distribution.app[0].domain_name}" : "http://${aws_lb.main.dns_name}"
 }
+
+output "ecr_repository_url" {
+  description = "URL of the ECR repository"
+  value       = aws_ecr_repository.main.repository_url
+}
+
+output "ecr_repository_name" {
+  description = "Name of the ECR repository"
+  value       = aws_ecr_repository.main.name
+}
+
+output "ecr_repository_arn" {
+  description = "ARN of the ECR repository"
+  value       = aws_ecr_repository.main.arn
+}

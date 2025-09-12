@@ -29,6 +29,61 @@ data "aws_subnets" "default" {
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
+# ECR Repository for container images
+resource "aws_ecr_repository" "main" {
+  name                 = "${var.project_name}-repo"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-ecr-repo"
+    Environment = "production"
+    Purpose     = "Container image storage"
+  }
+}
+
+# ECR Repository lifecycle policy to manage image retention
+resource "aws_ecr_lifecycle_policy" "main" {
+  repository = aws_ecr_repository.main.name
+
+  policy = jsonencode({
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Keep last 10 tagged images"
+        selection = {
+          tagStatus     = "tagged"
+          tagPrefixList = ["v", "latest", "main", "master"]
+          countType     = "imageCountMoreThan"
+          countNumber   = 10
+        }
+        action = {
+          type = "expire"
+        }
+      },
+      {
+        rulePriority = 2
+        description  = "Keep last 5 untagged images"
+        selection = {
+          tagStatus   = "untagged"
+          countType   = "imageCountMoreThan"
+          countNumber = 5
+        }
+        action = {
+          type = "expire"
+        }
+      }
+    ]
+  })
+}
+
 # Security group for ALB
 resource "aws_security_group" "alb" {
   name_prefix = "${var.project_name}-alb-"
@@ -171,7 +226,7 @@ resource "aws_ecs_task_definition" "app" {
 
   container_definitions = jsonencode([{
     name  = var.app_image_name
-    image = var.app_image
+    image = "${aws_ecr_repository.main.repository_url}:latest"
 
     portMappings = [{
       containerPort = var.app_port
