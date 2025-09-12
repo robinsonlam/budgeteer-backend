@@ -7,6 +7,13 @@ terraform {
       version = "~> 5.0"
     }
   }
+  
+  backend "s3" {
+    bucket  = "budgeteer-terraform-state-robinsonlam"
+    key     = "budgeteer/terraform.tfstate"
+    region  = "ap-southeast-2"
+    encrypt = true
+  }
 }
 
 provider "aws" {
